@@ -59,7 +59,7 @@ PROGRAM omi_sao_avg
   ! ----------------------------------------------
   ! Read name of process control file from STD I/O
   ! ----------------------------------------------
-  READ (*,'(A)') input_control_file
+  CALL getarg(1, input_control_file)
 
   ! -------------------------------------------------
   ! Read averaging control file with process settings
