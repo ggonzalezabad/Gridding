@@ -47,7 +47,7 @@ TARGET = SAO_OMIL2_ReadLib
 FC        = ifort
 CC        = icc
 FFLAGSopt = -fast -O3 -Bstatic -mcmodel=medium -i-dynamic #-Msmartalloc
-FFLAGSdbg = -O0 -g -C -traceback -check all -CB
+FFLAGSopt = -O0 -g -C -traceback -check all -CB
 CFLAGS    = -fast -O3 -Bstatic -mcmodel=medium #-Msmartalloc
 LNFLAGS   = -Bstatic
 

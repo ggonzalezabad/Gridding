@@ -814,6 +814,7 @@ SUBROUTINE gridding_loop (                                           &
   ! ---------------
   INTEGER (KIND=i4), DIMENSION (1:nlon_tess)             :: ylimit_upp, ylimit_low
   REAL    (KIND=r8), DIMENSION (1:nlon_tess,1:nlat_tess) :: tess_area
+  REAL    (KIND=r8), DIMENSION (1:nlat_tess,1:nlon_tess) :: tess_area_T
 
   INTEGER (KIND=i4) :: i, j, ilat, ilon
   REAL    (KIND=r8) :: tess_sum, max_area_r8, frac, errtmp, col_err_norm, &
@@ -833,11 +834,12 @@ SUBROUTINE gridding_loop (                                           &
   ! Tessellate the pixel
   ! --------------------
   tess_area = 0.0_r8 ; tess_sum = 0.0_r8 ; ylimit_low = 0 ; ylimit_upp = 0
+  tess_area_T = 0.0_r8
   CALL tesselate_areamaster (  &
        tess_lonpts(1:nlon_tess), tess_latpts(1:nlat_tess), nlon_tess, nlat_tess, & !i
        tess_satpix, tess_pars, tess_orient,                                      & !i
        tess_idx(1), tess_idx(2), tess_idx(3), tess_idx(4), tess_idx(5),          & !i
-       tess_area(1:nlon_tess,1:nlat_tess), tess_sum, ylimit_low(1:nlon_tess),    & !o
+       tess_area_T(1:nlat_tess,1:nlon_tess), tess_sum, ylimit_low(1:nlon_tess),  & !o
        ylimit_upp(1:nlon_tess) )                                                   !o
 
   ! ---------------------------------------------------------------------------------
@@ -851,6 +853,7 @@ SUBROUTINE gridding_loop (                                           &
   ! ---------------------------------------------------------------------------------
   DO i = 1, nlon_tess
      DO j = 1, nlat_tess
+        area_tess(i,j) = area_tess_T(j,i)
         IF ( tess_area(i,j) < 0.0_r8 ) tess_area(i,j) = 0.0_r8
      END DO
   END DO
