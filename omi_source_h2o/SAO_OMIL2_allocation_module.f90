@@ -20,7 +20,7 @@ MODULE SAO_OMIL2_allocation_module
   INTEGER (KIND=i2), DIMENSION (:,:), ALLOCATABLE :: qflag, xtqfe, xtqf, corflag, &
                                                      amfflag, srf_alt
   REAL    (KIND=r4), DIMENSION (:,:), ALLOCATABLE :: lat, lon, sza, cld_cfr, cld_ctp, &
-                                                     vza, amf, amf_epr
+                                                     vza, amf
   REAL    (KIND=r4), DIMENSION (:,:), ALLOCATABLE :: corlat, corlon
   REAL    (KIND=r8), DIMENSION (:,:), ALLOCATABLE :: col_reg, col_cor, col_err, &
                                                      slt_reg, slt_cor, slt_err, &
