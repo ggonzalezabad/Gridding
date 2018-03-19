@@ -853,7 +853,7 @@ SUBROUTINE gridding_loop (                                           &
   ! ---------------------------------------------------------------------------------
   DO i = 1, nlon_tess
      DO j = 1, nlat_tess
-        area_tess(i,j) = area_tess_T(j,i)
+        tess_area(i,j) = tess_area_T(j,i)
         IF ( tess_area(i,j) < 0.0_r8 ) tess_area(i,j) = 0.0_r8
      END DO
   END DO
