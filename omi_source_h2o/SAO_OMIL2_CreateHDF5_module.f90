@@ -141,13 +141,12 @@ CONTAINS
     ! Compose the data field names and define fields
     ! ----------------------------------------------
     he5stat = HE5_SWdefdfld (swath_id,'AMF',                   nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
-    he5stat = HE5_SWdefdfld (swath_id,'AMFErrorProfile',       nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
     he5stat = HE5_SWdefdfld (swath_id,'CloudFraction',         nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
     he5stat = HE5_SWdefdfld (swath_id,'CloudPressure',         nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
     he5stat = HE5_SWdefdfld (swath_id,'ColumnFitted',          nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
-    he5stat = HE5_SWdefdfld (swath_id,'ColumnFittedCorrected', nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
+    he5stat = HE5_SWdefdfld (swath_id,'ColumnFittedDestriped', nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
     he5stat = HE5_SWdefdfld (swath_id,'SlantFitted',           nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
-    he5stat = HE5_SWdefdfld (swath_id,'SlantFittedCorrected',  nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
+    he5stat = HE5_SWdefdfld (swath_id,'SlantFittedDestriped',  nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
     he5stat = HE5_SWdefdfld (swath_id,'ColumnUncertainty',     nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
     he5stat = HE5_SWdefdfld (swath_id,'SlantUncertainty',      nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
     he5stat = HE5_SWdefdfld (swath_id,'GridArea',              nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
