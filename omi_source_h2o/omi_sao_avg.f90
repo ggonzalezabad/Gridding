@@ -35,10 +35,12 @@ PROGRAM omi_sao_avg
   REAL    (KIND=r4) :: dlongr, dlatgr
   REAL    (KIND=r4) :: latmin, latmax, lonmin, lonmax
 
-  ! ------------------------------------------------
-  ! Maxima for cloud fraction and solar zenith angle
-  ! ------------------------------------------------
-  REAL (KIND=r4) :: cld_frc_min, cld_frc_max, szamax
+  ! ------------------------------------------------------
+  ! Maxima for cloud fraction, rms and solar zenith angle
+  ! Minimum for AMF, cloud fraction and cloud top pressure
+  ! ------------------------------------------------------
+  REAL (KIND=r4) :: cld_frc_min, cld_frc_max, szamax, &
+       cld_ctp_min, amf_min, rmsmax
 
   ! ---------------------------------------
   ! Maximum and minimum for xtrack position
@@ -70,6 +72,7 @@ PROGRAM omi_sao_avg
      yn_norm_output, yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom, &
      yn_amf_geo, yn_remove_bg,                                        &
      qflg_max, szamax, cld_frc_min, cld_frc_max, errwght,             &
+     cld_ctp_min, amf_min, rmsmax,                                    &
      lonmin, lonmax, dlongr, latmin, latmax, dlatgr,                  &
      xtrackmin, xtrackmax                                             )
   
@@ -87,7 +90,8 @@ PROGRAM omi_sao_avg
        TRIM(ADJUSTL(pge_esdt)), TRIM(ADJUSTL(listfile)),             &
        TRIM(ADJUSTL(outfile)), nlongr, nlatgr, dlongr, dlatgr,       &
        lonmin, lonmax, latmin, latmax, szamax, cld_frc_min,          &
-       cld_frc_max, yn_gpix_weight, yn_ucert_weight, errwght,        &
+       cld_frc_max, cld_ctp_min, amf_min,rmsmax,                     &
+       yn_gpix_weight, yn_ucert_weight, errwght,        &
        yn_use_rbszoom, yn_amf_geo, qflg_max,                         &
        yn_remove_bg, yn_norm_output, TRIM(ADJUSTL(output_format)),   &
        TRIM(ADJUSTL(swathname)), xtrackmin, xtrackmax                )
@@ -99,7 +103,8 @@ END PROGRAM omi_sao_avg
 SUBROUTINE gridding_process (                                        &
        pge_esdt, listfile, outfile, nlongr, nlatgr, dlongr, dlatgr,  &
        lonmin, lonmax, latmin, latmax, szamax, cld_frc_min,          &
-       cld_frc_max, yn_gpix_weight, yn_ucert_weight, errwght,        &
+       cld_frc_max, cld_ctp_min, amf_min, rmsmax,                    &
+       yn_gpix_weight, yn_ucert_weight, errwght,        &
        yn_use_rbszoom, yn_amf_geo, qflg_max,                         &
        yn_remove_bg, yn_norm_output, output_format, swathname,       &
        xtrackmin, xtrackmax                                          )
@@ -110,8 +115,7 @@ SUBROUTINE gridding_process (                                        &
   USE SAO_OMIL2_allocation_module, ONLY: &
        gcol_reg, gcol_cor, gcol_err, gcol_aer, gcol_alb, good_idx, &
        gcol_qfl, gcol_num, gcol_amf, gslt_reg, gslt_cor, gslt_err, &
-       gslt_aer, gcol_rms, gsrf_alt, gcld_cfr, gcld_ctp, gsrf_alt, &
-       gamf_epr
+       gslt_aer, gcol_rms, gsrf_alt, gcld_cfr, gcld_ctp, gsrf_alt
 
   IMPLICIT NONE
 
@@ -124,7 +128,8 @@ SUBROUTINE gridding_process (                                        &
   INTEGER (KIND=i4), INTENT (IN) :: nlongr, nlatgr
   REAL    (KIND=r8), INTENT (IN) :: errwght
   REAL    (KIND=r4), INTENT (IN) :: dlongr, dlatgr
-  REAL    (KIND=r4), INTENT (IN) :: lonmin, lonmax, latmin, latmax, szamax, cld_frc_min, cld_frc_max
+  REAL    (KIND=r4), INTENT (IN) :: lonmin, lonmax, latmin, latmax, szamax, cld_frc_min, &
+       cld_frc_max, cld_ctp_min, amf_min, rmsmax
   INTEGER (KIND=i2), INTENT (IN) :: qflg_max, xtrackmin, xtrackmax
 
 
@@ -185,7 +190,6 @@ SUBROUTINE gridding_process (                                        &
   ALLOCATE ( gsrf_alt(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gsrf_alt'
   ALLOCATE ( gcld_cfr(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcld_cfr'
   ALLOCATE ( gcld_ctp(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcld_ctp'
-  ALLOCATE ( gamf_epr(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcld_epr'
 
   ! ------------------------
   ! Initialize output arrays
@@ -198,7 +202,7 @@ SUBROUTINE gridding_process (                                        &
   gslt_cor = 0.0_r4 ;  gslt_err = 0.0_r4
   gslt_aer = 0.0_r4 ;  gcol_rms = 0.0_r4
   gsrf_alt = 0.0_r4 ;  gcld_cfr = 0.0_r4
-  gcld_ctp = 0.0_r4 ;  gamf_epr = 0.0_r4
+  gcld_ctp = 0.0_r4
 
   ! ------------------------------------------------------------------
   ! Calculate the maximally possible area a tessellated pixel may have
@@ -253,6 +257,7 @@ SUBROUTINE gridding_process (                                        &
           nXtrack, nTimes, l2_swathfile_id, l2_swath_id,                          &
           nlongr, nlatgr, dlongr, dlatgr, grid_lon(1:nlongr), grid_lat(1:nlatgr), &
           latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max,       &
+          cld_ctp_min, amf_min, rmsmax,                                           &
           max_area, yn_gpix_weight, yn_ucert_weight, errwght, yn_use_rbszoom,     &
           yn_amf_geo, yn_remove_bg, qflg_max, xtrackmin, xtrackmax  )
 
@@ -289,7 +294,6 @@ SUBROUTINE gridding_process (                                        &
            gcld_cfr(ilon,ilat) = gcld_cfr(ilon,ilat) * frac
            gcld_ctp(ilon,ilat) = gcld_ctp(ilon,ilat) * frac
            gcol_rms(ilon,ilat) = gcol_rms(ilon,ilat) * frac
-           gamf_epr(ilon,ilat) = gamf_epr(ilon,ilat) * frac
            ! ------------------------------------------------------------------
            ! GCOL_ERR holds the sum of the inverse squares of the unweighted
            ! fitting uncertainties. The final uncertainties are the SQRT of
@@ -319,7 +323,6 @@ SUBROUTINE gridding_process (                                        &
            gcld_cfr(ilon,ilat) = r4missval
            gcld_ctp(ilon,ilat) = r4missval
            gcol_rms(ilon,ilat) = r4missval
-           gamf_epr(ilon,ilat) = r4missval
         END IF
      END DO
   END DO
@@ -382,8 +385,6 @@ SUBROUTINE gridding_process (                                        &
           gcol_alb(1:nlongr,1:nlatgr), good_norm(idx_alb)           )
      CALL write_he5_data_r4 ( 'AMF',          nlongr, nlatgr,            &
           gcol_amf(1:nlongr,1:nlatgr), good_norm(idx_amf)           )
-     CALL write_he5_data_r4 ( 'AMFErrorProfile',  nlongr, nlatgr,        &
-          gamf_epr(1:nlongr,1:nlatgr), good_norm(idx_amf)           )
      CALL write_he5_data_r4 ( 'GridArea',          nlongr, nlatgr,       &
           gcol_aer(1:nlongr,1:nlatgr), good_norm(idx_aer)           )
      CALL write_he5_data_i2 ( 'QualityFlag',       nlongr, nlatgr,       &
@@ -433,7 +434,6 @@ SUBROUTINE gridding_process (                                        &
   IF ( ALLOCATED ( gsrf_alt ) )  DEALLOCATE ( gsrf_alt )
   IF ( ALLOCATED ( gcld_cfr ) )  DEALLOCATE ( gcld_cfr )
   IF ( ALLOCATED ( gcld_ctp ) )  DEALLOCATE ( gcld_ctp )
-  IF ( ALLOCATED ( gamf_epr ) )  DEALLOCATE ( gamf_epr )
 
   RETURN
 END SUBROUTINE gridding_process
@@ -443,6 +443,7 @@ SUBROUTINE datafile_loop (                                             &
      nXtrack, nTimes, l2_swathfile_id, l2_swath_id,                    &
      nlongr, nlatgr, dlongr, dlatgr, grid_lon, grid_lat,               &
      latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max, &
+     cld_ctp_min, amf_min, rmsmax,                                     &
      max_area, yn_gpix_weight, yn_ucert_weight, errwght,               &
      yn_use_rbszoom, yn_amf_geo, yn_remove_bg, qflg_max,               &
      xtrack_min, xtrack_max)
@@ -455,8 +456,7 @@ SUBROUTINE datafile_loop (                                             &
        qflag, lat, lon, sza, srf_alb, srf_alt, amf, vza,   &
        corlat, corlon, col_rms, col_reg, col_cor, col_err, &
        slt_reg, slt_cor, slt_err, xtqf, amf, col_rms,      &
-       srf_alt, cld_cfr, cld_ctp, corflag, amfflag, xtqfe, &
-       amf_epr
+       srf_alt, cld_cfr, cld_ctp, corflag, amfflag, xtqfe
   IMPLICIT NONE
 
   ! ---------------
@@ -464,7 +464,8 @@ SUBROUTINE datafile_loop (                                             &
   ! ---------------
   CHARACTER (LEN=*), INTENT (IN) :: pge_esdt
   INTEGER (KIND=i4), INTENT (IN) :: nXtrack, nTimes, l2_swathfile_id, l2_swath_id, nlongr, nlatgr
-  REAL    (KIND=r4), INTENT (IN) :: latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max
+  REAL    (KIND=r4), INTENT (IN) :: latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max, &
+       cld_ctp_min, amf_min, rmsmax
   REAL    (KIND=r4), INTENT (IN) :: max_area, dlongr, dlatgr
   REAL    (KIND=r8), INTENT (IN) :: errwght
   LOGICAL,           INTENT (IN) :: yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom
@@ -551,13 +552,10 @@ SUBROUTINE datafile_loop (                                             &
   ALLOCATE ( col_err(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'col_err'
   ALLOCATE ( col_rms(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'col_rms'
   ALLOCATE ( xtqfe  (1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'xtqfe  '
-  ALLOCATE ( corflag(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'corflag'
-  ALLOCATE ( amfflag(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'amfflag'
   ALLOCATE ( amf    (1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'amf    '
   ALLOCATE ( slt_reg(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_reg'
   ALLOCATE ( slt_cor(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_cor'
   ALLOCATE ( slt_err(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_err'
-  ALLOCATE ( amf_epr(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'amf_epr'
 
 
   ! ------------------------------------------------------------------
@@ -579,7 +577,7 @@ SUBROUTINE datafile_loop (                                             &
   CALL saopge_l2_read_datafields (                                         &
        he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0,             &
        fitcol_k=col_reg, fiterr_k=col_err, fitrms_k=col_rms,               &
-       qaflg_k=qflag, pclon_k=corlon, pclat_k=corlat)! fitcolrs_k=col_cor)
+       qaflg_k=qflag, pclon_k=corlon, pclat_k=corlat, fitcoldstr_k=col_cor)
   
   ! ------------------
   ! Screen for clouds. 
@@ -598,7 +596,7 @@ SUBROUTINE datafile_loop (                                             &
   IF (.NOT. yn_amf_geo) THEN
      CALL saopge_l2_read_datafields (                                        &
           he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, amf_k=amf, &
-          amfdiag_k=amfflag, amferrpro_k=amf_epr)
+          amfdiag_k=amfflag)
   ELSE IF (yn_amf_geo) THEN
      CALL saopge_l2_read_datafields (                                       &
           he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, amfgeo_k=amf )
@@ -628,12 +626,6 @@ SUBROUTINE datafile_loop (                                             &
   ! --------------------
   CALL saopge_l2_read_datafields (                              &
        he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, amfalb_k=srf_alb )
-
-  ! ------------------------------
-  ! Read reference correction flag
-  ! ------------------------------
-!!$  CALL saopge_l2_read_datafields (                              &
-!!$       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, corflag_k=corflag )
 
   ! -------------------------------
   ! Check for background adjustment
@@ -677,6 +669,8 @@ SUBROUTINE datafile_loop (                                             &
         !   (*) Quality Flag shows datum isn't good enough
         !   (*) Solar Zenith Angle too large
         !   (*) Pixel cloud coverage too large
+        !   (*) Pixel cloud top pressure too small
+        !   (*) Pixel amf too small
         !   (*) We have a rebinned spatial zoom but don't want
         !   (*) Don't use pixels affected by row anomaly
         !   (*) Only pixels with AMF calculation
@@ -691,10 +685,12 @@ SUBROUTINE datafile_loop (                                             &
              ( ABS(   sza(ix,it)) >  szamax                       ) .OR. &
              ( cld_cfr(ix,it)     <  cld_frc_min                  ) .OR. &
              ( cld_cfr(ix,it)     >  cld_frc_max                  ) .OR. &
+             ( cld_ctp(ix,it)     <  cld_ctp_min                  ) .OR. &
+             ( col_rms(ix,it)     >  rmsmax                       ) .OR. &
+             ( amf(ix,it)         <  amf_min                      ) .OR. &
              ( yn_reb_spat_zoom .AND. (.NOT. yn_use_rbszoom)      ) .OR. &
              ( xtqfe(ix,it) > 0_i2                                ) .OR. &             
              ( amfflag(ix,it) < 0_i2                              ) .OR. &
-!!$             ( corflag(ix,it) < 0_i2                              ) .OR. &
              ( ix .LT. xtrack_min                                 ) .OR. &
              ( ix .GT. xtrack_max                                 ) ) CYCLE
         
@@ -742,7 +738,7 @@ SUBROUTINE datafile_loop (                                             &
              col_reg(ix,it), col_cor(ix,it), col_err(ix,it), col_rms(ix,it), &
              srf_alb(ix,it), slt_reg(ix,it), slt_cor(ix,it), slt_err(ix,it), &
              amf(ix,it), srf_alt(ix,it), cld_cfr(ix,it), cld_ctp(ix,it),     &
-             amf_epr(ix,it), yn_gpix_weight, yn_ucert_weight, errwght        )
+             yn_gpix_weight, yn_ucert_weight, errwght        )
            
      END DO xtrack
   END DO swathlines
@@ -763,7 +759,6 @@ SUBROUTINE datafile_loop (                                             &
   IF ( ALLOCATED(col_err) ) DEALLOCATE (col_err)
   IF ( ALLOCATED(col_rms) ) DEALLOCATE (col_rms)
   IF ( ALLOCATED(xtqfe  ) ) DEALLOCATE (xtqfe  )
-  IF ( ALLOCATED(corflag) ) DEALLOCATE (corflag)
   IF ( ALLOCATED(amf    ) ) DEALLOCATE (amf    )
   IF ( ALLOCATED(amfflag) ) DEALLOCATE (amfflag)
   IF ( ALLOCATED(srf_alt) ) DEALLOCATE (srf_alt)
@@ -772,7 +767,6 @@ SUBROUTINE datafile_loop (                                             &
   IF ( ALLOCATED(slt_reg) ) DEALLOCATE (slt_reg)
   IF ( ALLOCATED(slt_cor) ) DEALLOCATE (slt_cor)
   IF ( ALLOCATED(slt_err) ) DEALLOCATE (slt_err)
-  IF ( ALLOCATED(amf_epr) ) DEALLOCATE (amf_epr)
 
   RETURN
 END SUBROUTINE datafile_loop
@@ -782,7 +776,7 @@ SUBROUTINE gridding_loop (                                           &
      tess_idx, tess_satpix, tess_pars, tess_orient, tess_idx_abs,    &
      dateline_offset, max_area, col_reg, col_cor, col_err, col_rms,  &
      srf_alb, slt_reg, slt_cor, slt_err, amf, srf_alt, cld_cfr,      &
-     cld_ctp, amf_epr, yn_gpix_weight, yn_ucert_weight, errwght      )
+     cld_ctp, yn_gpix_weight, yn_ucert_weight, errwght      )
 
   USE SAO_OMIL2_ReadLib_basic_module
   USE SAO_OMIL2_ReadLib_he5_module
@@ -791,8 +785,7 @@ SUBROUTINE gridding_loop (                                           &
                                          gcol_reg, gcol_cor, gcol_err, &
                                          gslt_reg, gslt_cor, gslt_err, &
                                          gcol_amf, gslt_aer, gcol_rms, &
-                                         gsrf_alt, gcld_cfr, gcld_ctp, &
-                                         gamf_epr
+                                         gsrf_alt, gcld_cfr, gcld_ctp
   IMPLICIT NONE
 
   ! ---------------
@@ -810,7 +803,7 @@ SUBROUTINE gridding_loop (                                           &
   REAL    (KIND=r8), DIMENSION (4,2),         INTENT (IN) :: tess_satpix
   REAL    (KIND=r8),                          INTENT (IN) :: col_reg, col_cor, col_err, col_rms
   REAL    (KIND=r8),                          INTENT (IN) :: slt_reg, slt_cor, slt_err, srf_alb
-  REAL    (KIND=r4),                          INTENT (IN) :: amf, cld_cfr, cld_ctp, amf_epr
+  REAL    (KIND=r4),                          INTENT (IN) :: amf, cld_cfr, cld_ctp
   INTEGER (KIND=i2),                          INTENT (IN) :: srf_alt
   LOGICAL,                                    INTENT (IN) :: yn_gpix_weight, yn_ucert_weight
 
@@ -931,7 +924,6 @@ SUBROUTINE gridding_loop (                                           &
            gcld_ctp(ilon,ilat) = gcld_ctp(ilon,ilat) + REAL(tess_area(i,j)*cld_ctp * frac,     KIND=r4)
            gslt_reg(ilon,ilat) = gslt_reg(ilon,ilat) + REAL(tess_area(i,j)*slt_reg * frac_slt, KIND=r4)
            gslt_cor(ilon,ilat) = gslt_cor(ilon,ilat) + REAL(tess_area(i,j)*slt_cor * frac_slt, KIND=r4)
-           gamf_epr(ilon,ilat) = gamf_epr(ilon,ilat) + REAL(tess_area(i,j)*amf_epr * frac,     KIND=r4)
 
            ! ----------------------------------------------------------------------
            ! To compute the weighted error, we have to add the inverse square of
@@ -1178,6 +1170,7 @@ SUBROUTINE omi_avg_read_input (                                       &
      yn_norm_output, yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom, &
      yn_amf_geo,  yn_remove_bg,                                       &
      qflg_max, szamax, cld_frc_min, cld_frc_max, errwght,             &
+     cld_ctp_min, amf_min, rmsmax,                                    &
      lonmin, lonmax, dlongr, latmin, latmax, dlatgr,                  &
      xtrackmin, xtrackmax                                             )
 
@@ -1197,7 +1190,7 @@ SUBROUTINE omi_avg_read_input (                                       &
   LOGICAL,             INTENT (OUT) :: yn_amf_geo, yn_remove_bg
   INTEGER   (KIND=i2), INTENT (OUT) :: qflg_max, xtrackmin, xtrackmax
   REAL      (KIND=r8), INTENT (OUT) :: errwght
-  REAL      (KIND=r4), INTENT (OUT) :: szamax, cld_frc_min, cld_frc_max
+  REAL      (KIND=r4), INTENT (OUT) :: szamax, cld_frc_min, cld_frc_max, cld_ctp_min, amf_min, rmsmax
   REAL      (KIND=r4), INTENT (OUT) :: lonmin, lonmax, dlongr, latmin, latmax, dlatgr
 
   ! ---------------
@@ -1225,6 +1218,9 @@ SUBROUTINE omi_avg_read_input (                                       &
   CHARACTER (LEN=25), PARAMETER :: fm_amfg = 'Geometric air mass factor'
   CHARACTER (LEN=22), PARAMETER :: fm_bgrm = 'HCHO remove background'
   CHARACTER (LEN=18), PARAMETER :: fm_xtra = 'xtrack pixel range'
+  CHARACTER (LEN=26), PARAMETER :: fm_cprs = 'Minimum cloud top pressure'
+  CHARACTER (LEN=11), PARAMETER :: fm_amf  = 'Minimum AMF'
+  CHARACTER (LEN=11), PARAMETER :: fm_rms  = 'Maximum RMS'
 
   ! -----------------------
   ! Open input control file
@@ -1297,6 +1293,27 @@ SUBROUTINE omi_avg_read_input (                                       &
   CALL skip_to_filemark ( ipunit, fm_glim, yn_fail ) ; IF ( yn_fail ) STOP 1
   READ (ipunit, *) lonmin, lonmax, dlongr
   READ (ipunit, *) latmin, latmax, dlatgr
+
+  ! -------------------------------------------------------------
+  ! Minimum cloud top pressure
+  ! -------------------------------------------------------------
+  REWIND (ipunit)
+  CALL skip_to_filemark ( ipunit, fm_cprs, yn_fail ) ; IF ( yn_fail ) STOP 1
+  READ (ipunit, *) cld_ctp_min
+
+  ! ------------------------------------------------------------
+  ! Minimum amf
+  ! ------------------------------------------------------------
+  REWIND (ipunit)
+  CALL skip_to_filemark ( ipunit, fm_amf, yn_fail ) ; IF ( yn_fail ) STOP 1
+  READ (ipunit, *) amf_min
+
+  ! ------------------------------------------------------------
+  ! Maximum fitting rms
+  ! ------------------------------------------------------------
+  REWIND (ipunit)
+  CALL skip_to_filemark ( ipunit, fm_rms, yn_fail ) ; IF ( yn_fail ) STOP 1
+  READ (ipunit, *) rmsmax
 
   ! -------------------------------------------------------------
   ! Maximum cloud fraction (ignored for some ESDTs, e.g., OMOCLO)
