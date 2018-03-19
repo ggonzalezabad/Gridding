@@ -400,7 +400,7 @@ SUBROUTINE gridding_process (                                        &
 
      CALL write_he5_data_r4 ( 'ColumnFitted',      nlongr, nlatgr,       &
           gcol_reg(1:nlongr,1:nlatgr), good_norm(idx_col)           )
-     CALL write_he5_data_r4 ( 'ColumnFittedCorrected',   nlongr, nlatgr, &
+     CALL write_he5_data_r4 ( 'ColumnFittedDestriped',   nlongr, nlatgr, &
           gcol_cor(1:nlongr,1:nlatgr), good_norm(idx_cor)           )
      CALL write_he5_data_r4 ( 'ColumnUncertainty', nlongr, nlatgr,       &
           gcol_err(1:nlongr,1:nlatgr), good_norm(idx_err)           )
@@ -409,7 +409,7 @@ SUBROUTINE gridding_process (                                        &
 
      CALL write_he5_data_r4 ( 'SlantFitted',          nlongr, nlatgr,      &
           gslt_reg(1:nlongr,1:nlatgr), good_norm(idx_col_slt)       )
-     CALL write_he5_data_r4 ( 'SlantFittedCorrected', nlongr, nlatgr,      &
+     CALL write_he5_data_r4 ( 'SlantFittedDestriped', nlongr, nlatgr,      &
           gslt_cor(1:nlongr,1:nlatgr), good_norm(idx_cor_slt)       )
      CALL write_he5_data_r4 ( 'SlantUncertainty',          nlongr, nlatgr, &
           gslt_err(1:nlongr,1:nlatgr), good_norm(idx_err_slt)       )
