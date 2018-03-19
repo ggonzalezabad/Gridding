@@ -10,7 +10,7 @@ MODULE SAO_OMIL2_allocation_module
                                                      gcol_aer, gcol_alb, gcol_amf, &
                                                      gslt_reg, gslt_cor, gslt_err, &
                                                      gslt_aer, gcol_rms, gsrf_alt
-  REAL    (KIND=r4), DIMENSION (:,:), ALLOCATABLE :: gcld_cfr, gcld_ctp, gamf_epr
+  REAL    (KIND=r4), DIMENSION (:,:), ALLOCATABLE :: gcld_cfr, gcld_ctp
   INTEGER (KIND=i2), DIMENSION (:,:), ALLOCATABLE :: good_idx, gcol_qfl
   INTEGER (KIND=i4), DIMENSION (:,:), ALLOCATABLE :: gcol_num
 

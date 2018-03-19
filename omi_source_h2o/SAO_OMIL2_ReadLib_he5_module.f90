@@ -349,7 +349,7 @@ CONTAINS
        he5stat,                                                           & ! Output
        l2_swath_id, nxs, nxe, nts, nte, nfs, nfe, nfecl,                  &
        amfgeo_k, fitcorr_k, fitcorrstr_k, amf_k, amfdiag_k,               &
-       amfcfr_k, amfprs_k, amferrpro_k, fitcol_k, amfalb_k,               &
+       amfcfr_k, amfprs_k, fitcol_k, amfalb_k,               &
        fitcoldstr_k, corrfac_k, fiterr_k, fitrms_k, convflg_k, qaflg_k,   &
        itercnt_k, avgcol_k, avgerr_k, avgrms_k,                           &
        parea_k, pclon_k, pclat_k,                                         &
@@ -375,7 +375,6 @@ CONTAINS
     INTEGER (KIND=i2), DIMENSION(nxs:nxe,nts:nte),        OPTIONAL, INTENT (OUT) :: amfdiag_k
     REAL    (KIND=r4), DIMENSION(nxs:nxe,nts:nte),        OPTIONAL, INTENT (OUT) :: amfcfr_k
     REAL    (KIND=r4), DIMENSION(nxs:nxe,nts:nte),        OPTIONAL, INTENT (OUT) :: amfprs_k
-    REAL    (KIND=r4), DIMENSION(nxs:nxe,nts:nte),        OPTIONAL, INTENT (OUT) :: amferrpro_k
     REAL    (KIND=r8), DIMENSION(nxs:nxe,nts:nte),        OPTIONAL, INTENT (OUT) :: amfalb_k
     REAL    (KIND=r8), DIMENSION(nxs:nxe),                OPTIONAL, INTENT (OUT) :: corrfac_k
     REAL    (KIND=r8), DIMENSION(nxs:nxe,nts:nte),        OPTIONAL, INTENT (OUT) :: fitcol_k
@@ -470,23 +469,6 @@ CONTAINS
           IF ( locestat /= he5_stat_ok ) he5stat = MAX ( he5stat, estat_error )
        ELSE
           amf_k = 0.0_r8
-       END IF
-    END IF
-
-    ! ---------------------------------------
-    ! Molecular air mass factor profile error
-    ! ---------------------------------------
-    IF ( PRESENT ( amferrpro_k )  ) THEN
-       CALL locate_datafield ( l2_swath_id, 'AirMassFactorErrorProfile',  yn_have_amf )
-       IF ( yn_have_amf ) THEN
-          start_2d  = (/ nxs48-1_i48,       nts48 /)
-          stride_2d = (/       1_i48,       1_i48 /)
-          edge_2d   = (/       nxe48, nte48+1_i48 /)
-          locestat = HE5_SWrdfld ( l2_swath_id, 'AirMassFactorErrorProfile', &
-               start_2d, stride_2d, edge_2d, amferrpro_k(nxs:nxe,nts:nte) )
-          IF ( locestat /= he5_stat_ok ) he5stat = MAX ( he5stat, estat_error )
-       ELSE
-          amferrpro_k = 0.0_r8
        END IF
     END IF
 
