@@ -553,6 +553,7 @@ SUBROUTINE datafile_loop (                                             &
   ALLOCATE ( col_rms(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'col_rms'
   ALLOCATE ( xtqfe  (1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'xtqfe  '
   ALLOCATE ( amf    (1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'amf    '
+  ALLOCATE ( amfflag(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'amfflag'
   ALLOCATE ( slt_reg(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_reg'
   ALLOCATE ( slt_cor(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_cor'
   ALLOCATE ( slt_err(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_err'
