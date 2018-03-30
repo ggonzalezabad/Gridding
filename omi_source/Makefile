@@ -32,10 +32,10 @@ SHELL   = /bin/sh
 # are compiling in 32bit or 64bit.
 # ========================================================
 ifeq (32,$(bitversion))
-   OMIUTIL = /data/dumbo/gonzalo/lib/INT_32
+   OMIUTIL = /data/tempo2/ggonzale/TEMPO_code/ots/gnu
    FLAVOR  = linux32
 else
-   OMIUTIL = /data/dumbo/gonzalo/lib/Intel
+   OMIUTIL = /data/tempo2/ggonzale/TEMPO_code/ots/gnu
    FLAVOR  = linux64
 endif
 
@@ -44,12 +44,12 @@ endif
 # ==============
 TARGET = SAO_OMIL2_ReadLib
 
-FC        = ifort
-CC        = icc
-FFLAGSopt = -fast -O3 -Bstatic -mcmodel=medium -i-dynamic #-Msmartalloc
-FFLAGSopt = -O0 -g -C -traceback -check all -CB
-CFLAGS    = -fast -O3 -Bstatic -mcmodel=medium #-Msmartalloc
-LNFLAGS   = -Bstatic
+FC        = gfortran
+CC        = gcc
+FFLAGSopt = -Ofast -mcmodel=medium 
+FFLAGSdbg = -g -C -fbacktrace -Wall -fcheck=all
+CFLAGS    = -Ofast -mcmodel=medium
+LNFLAGS   = -static
 
 
 # ------------------------------------------------
@@ -71,39 +71,24 @@ endif
 # ----------------------------
 # Generic additional libraries
 # ----------------------------
-ADDLIBS     = -lz -lsz -lm
+ADDLIBS     = -lz -lsz -lm -ldl
 PSPLINELIBS = -lpspline -lezcdf
 NETCDFLIBS  = -lnetcdf
 HE4LIBS     = -lhdfeos -lmfhdf -lGctp -ldf -ljpeg
-HE5LIBS     = -lhe5_hdfeos -lhdf5_hl -lhdf5_fortran -lhdf5hl_fortran -lhdf5_cpp -lhdf5
+HE5LIBS     = -lhe5_hdfeos -lhdf5_hl -lhdf5_fortran -lhdf5hl_fortran -lhdf5
 
 # =================================
 # HDF5 and HDFEOS5 libraries to use
 # =================================
-HDFINC      = $(OMIUTIL)/hdf4/include
-HDFLIB      = $(OMIUTIL)/hdf4/lib
-HDF5INC     = $(OMIUTIL)/hdf5/include
-HDF5LIB     = $(OMIUTIL)/hdf5/lib
-HDFEOS_INC  = $(OMIUTIL)/hdfeos4/include
-HDFEOS_LIB  = $(OMIUTIL)/hdfeos4/lib/$(FLAVOR)
+HDFEOS_INC  = $(OMIUTIL)/hdfeos/include
+HDFEOS_LIB  = $(OMIUTIL)/hdfeos/lib/$(FLAVOR)
 HDFEOS5_INC = $(OMIUTIL)/hdfeos5/include
 HDFEOS5_LIB = $(OMIUTIL)/hdfeos5/lib/$(FLAVOR)
-NETCDFINC   = $(OMIUTIL)/netcdf/include
-NETCDFLIB   = $(OMIUTIL)/netcdf/lib
-PSPLINEMOD  = $(OMIUTIL)/pspline/mod
-PSPLINELIB  = $(OMIUTIL)/pspline/lib
 
-IFLAGS = -I$(OMIUTIL)/include                      \
-         -I$(HDFEOS_INC)  $(MODFLG)$(HDFEOS_INC)   \
-         -I$(HDF5INC)     $(MODFLG)$(HDF5LIB)      \
-         -I$(HDFINC)      $(MODFLG)$(HDFINC)       \
-         -I$(HDFEOS5_INC) $(MODFLG)$(HDFEOS5_INC)  \
-         -I$(NETCDFINC)   $(MODFLG)$(NETCDFINC)    \
-                          $(MODFLG)$(PSPLINEMOD)
+IFLAGS = -I$(OMIUTIL)/include -I$(OMIUTIL)/mod \
+	 -I$(HDFEOS_INC) -I$(HDFEOS5_INC) 
 
-LFLAGS = -L$(OMIUTIL)/lib                                          \
-         -L$(HDFEOS_LIB) -L$(HDFLIB) -L$(HDF5LIB) -L$(HDFEOS5_LIB) \
-         -L$(NETCDFLIB)  -L$(PSPLINELIB)
+LFLAGS = -L$(OMIUTIL)/lib -L$(HDFEOS_LIB) -L$(HDFEOS5_LIB)
 
 LIBS   = $(PSPLINELIBS) $(NETCDFLIBS)                \
          $(HE5LIBS) $(HE4LIBS) $(ADDLIBS)
