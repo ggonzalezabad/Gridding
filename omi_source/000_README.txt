@@ -1,6 +1,6 @@
 Gridding software (questions to ggonzalezabad@cfa.harvard.edu)
 1. Compiling
-      It uses ifort and icc. Other configurations have not been 
+      It uses gfortran and gcc. Other configurations have not been 
       tested but please feel free to do so and let me know the results.
       Basic options:
    	 - Compile tool >gmake target=omi_sao_avg
