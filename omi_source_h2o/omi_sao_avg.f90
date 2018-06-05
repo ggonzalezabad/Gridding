@@ -40,7 +40,7 @@ PROGRAM omi_sao_avg
   ! Minimum for AMF, cloud fraction and cloud top pressure
   ! ------------------------------------------------------
   REAL (KIND=r4) :: cld_frc_min, cld_frc_max, szamax, &
-       cld_ctp_min, amf_min, rmsmax
+       cld_ctp_min, amf_min, rmsmax, vcdmax
 
   ! ---------------------------------------
   ! Maximum and minimum for xtrack position
@@ -72,7 +72,7 @@ PROGRAM omi_sao_avg
      yn_norm_output, yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom, &
      yn_amf_geo, yn_remove_bg,                                        &
      qflg_max, szamax, cld_frc_min, cld_frc_max, errwght,             &
-     cld_ctp_min, amf_min, rmsmax,                                    &
+     cld_ctp_min, amf_min, rmsmax, vcdmax,                            &
      lonmin, lonmax, dlongr, latmin, latmax, dlatgr,                  &
      xtrackmin, xtrackmax                                             )
   
@@ -90,7 +90,7 @@ PROGRAM omi_sao_avg
        TRIM(ADJUSTL(pge_esdt)), TRIM(ADJUSTL(listfile)),             &
        TRIM(ADJUSTL(outfile)), nlongr, nlatgr, dlongr, dlatgr,       &
        lonmin, lonmax, latmin, latmax, szamax, cld_frc_min,          &
-       cld_frc_max, cld_ctp_min, amf_min,rmsmax,                     &
+       cld_frc_max, cld_ctp_min, amf_min, rmsmax, vcdmax,            &
        yn_gpix_weight, yn_ucert_weight, errwght,        &
        yn_use_rbszoom, yn_amf_geo, qflg_max,                         &
        yn_remove_bg, yn_norm_output, TRIM(ADJUSTL(output_format)),   &
@@ -103,7 +103,7 @@ END PROGRAM omi_sao_avg
 SUBROUTINE gridding_process (                                        &
        pge_esdt, listfile, outfile, nlongr, nlatgr, dlongr, dlatgr,  &
        lonmin, lonmax, latmin, latmax, szamax, cld_frc_min,          &
-       cld_frc_max, cld_ctp_min, amf_min, rmsmax,                    &
+       cld_frc_max, cld_ctp_min, amf_min, rmsmax, vcdmax,            &
        yn_gpix_weight, yn_ucert_weight, errwght,        &
        yn_use_rbszoom, yn_amf_geo, qflg_max,                         &
        yn_remove_bg, yn_norm_output, output_format, swathname,       &
@@ -129,7 +129,7 @@ SUBROUTINE gridding_process (                                        &
   REAL    (KIND=r8), INTENT (IN) :: errwght
   REAL    (KIND=r4), INTENT (IN) :: dlongr, dlatgr
   REAL    (KIND=r4), INTENT (IN) :: lonmin, lonmax, latmin, latmax, szamax, cld_frc_min, &
-       cld_frc_max, cld_ctp_min, amf_min, rmsmax
+       cld_frc_max, cld_ctp_min, amf_min, rmsmax, vcdmax
   INTEGER (KIND=i2), INTENT (IN) :: qflg_max, xtrackmin, xtrackmax
 
 
@@ -257,7 +257,7 @@ SUBROUTINE gridding_process (                                        &
           nXtrack, nTimes, l2_swathfile_id, l2_swath_id,                          &
           nlongr, nlatgr, dlongr, dlatgr, grid_lon(1:nlongr), grid_lat(1:nlatgr), &
           latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max,       &
-          cld_ctp_min, amf_min, rmsmax,                                           &
+          cld_ctp_min, amf_min, rmsmax, vcdmax,                                   &
           max_area, yn_gpix_weight, yn_ucert_weight, errwght, yn_use_rbszoom,     &
           yn_amf_geo, yn_remove_bg, qflg_max, xtrackmin, xtrackmax  )
 
@@ -443,7 +443,7 @@ SUBROUTINE datafile_loop (                                             &
      nXtrack, nTimes, l2_swathfile_id, l2_swath_id,                    &
      nlongr, nlatgr, dlongr, dlatgr, grid_lon, grid_lat,               &
      latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max, &
-     cld_ctp_min, amf_min, rmsmax,                                     &
+     cld_ctp_min, amf_min, rmsmax, vcdmax,                             &
      max_area, yn_gpix_weight, yn_ucert_weight, errwght,               &
      yn_use_rbszoom, yn_amf_geo, yn_remove_bg, qflg_max,               &
      xtrack_min, xtrack_max)
@@ -464,8 +464,8 @@ SUBROUTINE datafile_loop (                                             &
   ! ---------------
   CHARACTER (LEN=*), INTENT (IN) :: pge_esdt
   INTEGER (KIND=i4), INTENT (IN) :: nXtrack, nTimes, l2_swathfile_id, l2_swath_id, nlongr, nlatgr
-  REAL    (KIND=r4), INTENT (IN) :: latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max, &
-       cld_ctp_min, amf_min, rmsmax
+  REAL    (KIND=r4), INTENT (IN) :: latmin, latmax, lonmin, lonmax, szamax, &
+       cld_frc_min, cld_frc_max, cld_ctp_min, amf_min, rmsmax, vcdmax
   REAL    (KIND=r4), INTENT (IN) :: max_area, dlongr, dlatgr
   REAL    (KIND=r8), INTENT (IN) :: errwght
   LOGICAL,           INTENT (IN) :: yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom
@@ -617,7 +617,7 @@ SUBROUTINE datafile_loop (                                             &
         ! ------------------------------------------
         amfr8 = REAL(amf(ix,it), KIND=r8)
         IF ( col_reg(ix,it) > -1.0E+30_r8 ) slt_reg(ix,it) = col_reg(ix,it) * amfr8
-        IF ( col_err(ix,it) > -1.0E+30_r8 ) slt_cor(ix,it) = col_cor(ix,it) * amfr8
+        IF ( col_cor(ix,it) > -1.0E+30_r8 ) slt_cor(ix,it) = col_cor(ix,it) * amfr8
         IF ( col_err(ix,it) > -1.0E+30_r8 ) slt_err(ix,it) = col_err(ix,it) * amfr8
      END DO
   END DO
@@ -667,7 +667,8 @@ SUBROUTINE datafile_loop (                                             &
         ! ------------------------------------------------------------
         ! Various reasons for skipping the current pixels:
         !   (*) Geolocation, with margin, outside the gridding domain
-        !   (*) Quality Flag shows datum isn't good enough
+        !   (*) Main Quality Flag shows data isn't good enough
+        !   (*) Unphysical VCD values or retrieval errors
         !   (*) Solar Zenith Angle too large
         !   (*) Pixel cloud coverage too large
         !   (*) Pixel cloud top pressure too small
@@ -675,7 +676,7 @@ SUBROUTINE datafile_loop (                                             &
         !   (*) We have a rebinned spatial zoom but don't want
         !   (*) Don't use pixels affected by row anomaly
         !   (*) Only pixels with AMF calculation
-        !   (*) Only pixels inbetween xtrack_min and xtrack_max.
+        !   (*) Only pixels between xtrack_min and xtrack_max.
         !       Posible conflict with zoom files but I'm not planning
         !       on using them
         ! ------------------------------------------------------------
@@ -683,6 +684,8 @@ SUBROUTINE datafile_loop (                                             &
              ( lat(ix,it) > latmax_p5 .OR. lat(ix,it) < latmin_p5 ) .OR. &
              ( ABS(qflag(ix,it))  >  qflg_max                     ) .OR. &
              ( col_err(ix,it)     <= 0.0_r8                       ) .OR. &
+             ( col_cor(ix,it)     < 0.0_r8                        ) .OR. &
+             ( col_cor(ix,it)     > vcdmax                        ) .OR. &
              ( ABS(   sza(ix,it)) >  szamax                       ) .OR. &
              ( cld_cfr(ix,it)     <  cld_frc_min                  ) .OR. &
              ( cld_cfr(ix,it)     >  cld_frc_max                  ) .OR. &
@@ -1171,7 +1174,7 @@ SUBROUTINE omi_avg_read_input (                                       &
      yn_norm_output, yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom, &
      yn_amf_geo,  yn_remove_bg,                                       &
      qflg_max, szamax, cld_frc_min, cld_frc_max, errwght,             &
-     cld_ctp_min, amf_min, rmsmax,                                    &
+     cld_ctp_min, amf_min, rmsmax, vcdmax,                            &
      lonmin, lonmax, dlongr, latmin, latmax, dlatgr,                  &
      xtrackmin, xtrackmax                                             )
 
@@ -1191,7 +1194,8 @@ SUBROUTINE omi_avg_read_input (                                       &
   LOGICAL,             INTENT (OUT) :: yn_amf_geo, yn_remove_bg
   INTEGER   (KIND=i2), INTENT (OUT) :: qflg_max, xtrackmin, xtrackmax
   REAL      (KIND=r8), INTENT (OUT) :: errwght
-  REAL      (KIND=r4), INTENT (OUT) :: szamax, cld_frc_min, cld_frc_max, cld_ctp_min, amf_min, rmsmax
+  REAL      (KIND=r4), INTENT (OUT) :: szamax, cld_frc_min, cld_frc_max, cld_ctp_min, &
+       amf_min, rmsmax, vcdmax
   REAL      (KIND=r4), INTENT (OUT) :: lonmin, lonmax, dlongr, latmin, latmax, dlatgr
 
   ! ---------------
@@ -1222,6 +1226,7 @@ SUBROUTINE omi_avg_read_input (                                       &
   CHARACTER (LEN=26), PARAMETER :: fm_cprs = 'Minimum cloud top pressure'
   CHARACTER (LEN=11), PARAMETER :: fm_amf  = 'Minimum AMF'
   CHARACTER (LEN=11), PARAMETER :: fm_rms  = 'Maximum RMS'
+  CHARACTER (LEN=11), PARAMETER :: fm_vcd  = 'Maximum VCD'
 
   ! -----------------------
   ! Open input control file
@@ -1315,6 +1320,13 @@ SUBROUTINE omi_avg_read_input (                                       &
   REWIND (ipunit)
   CALL skip_to_filemark ( ipunit, fm_rms, yn_fail ) ; IF ( yn_fail ) STOP 1
   READ (ipunit, *) rmsmax
+
+  ! ------------------------------------------------------------
+  ! Maximum VCD
+  ! ------------------------------------------------------------
+  REWIND (ipunit)
+  CALL skip_to_filemark ( ipunit, fm_vcd, yn_fail ) ; IF ( yn_fail ) STOP 1
+  READ (ipunit, *) vcdmax
 
   ! -------------------------------------------------------------
   ! Maximum cloud fraction (ignored for some ESDTs, e.g., OMOCLO)

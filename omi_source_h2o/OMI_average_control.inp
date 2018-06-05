@@ -18,7 +18,7 @@ File name with list of input files
 # Name of output file (absolute path)
 # -----------------------------------
 Output file name
-./OMH2O_test.he5
+./OMH2O_L3.he5
 
 # ---------------------------------------------------------
 # Output format ("ascii", "he5"; can be more than one) and,
@@ -53,15 +53,39 @@ Maximum solar zenith angle
 # (2) Lat_min Lat_max dLat
 # -----------------------------
 Longitude and latitude limits
--180.0 +180.0  0.25
- -90.0  +90.0  0.25
+-180.0 +180.0  0.5
+ -90.0  +90.0  0.5
 
 # -------------------------------------------------------------
 # Maximum cloud fraction (ignored for some ESDTs, e.g., OMOCLO)
 # Input range: 0.0 <= cfr <= 1.0
 # -------------------------------------------------------------
 Maximum cloud fraction
-0.00 0.40
+0.00 0.05
+
+# -------------------------------------------------------------
+# Minimum cloud top pressure (mb)
+# -------------------------------------------------------------
+Minimum cloud top pressure
+500.00
+
+# -------------------------------------------------------------
+# Minimum AMF
+# -------------------------------------------------------------
+Minimum AMF
+0.75
+
+# -------------------------------------------------------------
+# Maximum fitting RMS
+# -------------------------------------------------------------
+Maximum RMS
+0.00125
+
+# -------------------------------------------------------------
+# Maximum VCD
+# -------------------------------------------------------------
+Maximum VCD
+4.0e+23
 
 # -----------------------------------------------------------------
 # Weighting of averages inversely proportional to ground pixel size
@@ -76,7 +100,7 @@ T
 # uncertainties to ~1 (e.g., 1.0E+13 for OMBRO, 1.0e15 for OMHCHO)
 # ------------------------------------------------------------------
 Uncertainty weighting
-T 1.0e+15
+T 1.0e+23
 
 # ----------------------------------------------------
 # Include rebinned spatial zoom granules in averaging?
@@ -101,4 +125,4 @@ F
 # Select xtrack pixel # range
 # ---------------------------
 xtrack pixel range
-5 55
+1 60 
