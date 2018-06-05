@@ -44,7 +44,7 @@ endif
 # ==============
 TARGET = SAO_OMIL2_ReadLib
 
-FC        = gfortran
+FC        = gfortran -Wl,-rpath=$(LDIR)
 CC        = gcc
 FFLAGSopt = -Ofast -mcmodel=medium 
 FFLAGSdbg = -g -C -fbacktrace -Wall -fcheck=all
@@ -104,6 +104,8 @@ IFLAGS = -I$(OMIUTIL)/include                      \
 LFLAGS = -L$(OMIUTIL)/lib                                          \
          -L$(HDFEOS_LIB) -L$(HDFLIB) -L$(HDF5LIB) -L$(HDFEOS5_LIB) \
          -L$(NETCDFLIB)  -L$(PSPLINELIB)
+
+LDIR = $(OMIUTIL)/lib
 
 LIBS   = $(PSPLINELIBS) $(NETCDFLIBS)                \
          $(HE5LIBS) $(HE4LIBS) $(ADDLIBS)
