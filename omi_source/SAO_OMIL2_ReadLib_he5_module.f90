@@ -68,7 +68,7 @@ CONTAINS
 
 
   SUBROUTINE saopge_l2_read_dimensions ( &
-       he5stat, l2_swath_id, nTimes_k, nXtrack_k, nFitElem_k, nClenFitElem_k )
+       he5stat, l2_swath_id, nTimes_k, nXtrack_k, nFitElem_k, nClenFitElem_k, nlev_k )
 
     ! -----------------------
     ! Return swath dimensions
@@ -84,13 +84,13 @@ CONTAINS
     ! ----------------
     INTEGER (KIND=i4),           INTENT (OUT) :: he5stat
     INTEGER (KIND=i4), OPTIONAL, INTENT (OUT) :: &
-         nTimes_k, nXtrack_k, nFitElem_k, nClenFitElem_k
+         nTimes_k, nXtrack_k, nFitElem_k, nClenFitElem_k, nlev_k
 
     ! ---------------
     ! Local variables
     ! ---------------
     INTEGER   (KIND=i4), PARAMETER             :: maxdim = 100
-    INTEGER   (KIND=i4)                        :: ndim, nt, nx, nf, nc, nmin
+    INTEGER   (KIND=i4)                        :: ndim, nt, nx, nf, nc, nmin, nl
     INTEGER   (KIND=i4)                        :: i, j, locestat, swlen, iend, istart
     INTEGER   (KIND=i48)                       :: ndim48
     INTEGER   (KIND=i4),  DIMENSION(0:maxdim)  :: dim_array
@@ -143,6 +143,7 @@ CONTAINS
           IF ( dim_chars(istart:iend) == "nXtrack" )             nx = dim_array(j)
           IF ( dim_chars(istart:iend) == "nFitElements"  )       nf = dim_array(j)
           IF ( dim_chars(istart:iend) == "nCharLenFitElements" ) nc = dim_array(j)
+          IF ( dim_chars(istart:iend) == "nLevels" )             nl = dim_array(j)
           istart = i + 1 ; j = j + 1
           IF ( j > ndim ) EXIT getdim
        END IF
@@ -155,6 +156,7 @@ CONTAINS
     IF ( PRESENT (nXtrack_k)      ) nXtrack_k      = nx
     IF ( PRESENT (nFitElem_k)     ) nFitElem_k     = nf
     IF ( PRESENT (nClenFitElem_k) ) nClenFitElem_k = nc
+    IF ( PRESENT (nlev_k) )         nlev_k         = nl
 
     RETURN
   END SUBROUTINE saopge_l2_read_dimensions
@@ -347,14 +349,14 @@ CONTAINS
 
   SUBROUTINE saopge_l2_read_datafields ( &
        he5stat,                                                           & ! Output
-       l2_swath_id, nxs, nxe, nts, nte, nfs, nfe, nfecl,                  &
+       l2_swath_id, nxs, nxe, nts, nte, nfs, nfe, nfecl, nls, nle,        &
        amfgeo_k, fitcorr_k, fitcorrstr_k, amf_k, amfdiag_k,               &
        amfcfr_k, amfprs_k, fitcol_k, amfalb_k,                            &
        fitcoldstr_k, corrfac_k, fiterr_k, fitrms_k, convflg_k, qaflg_k,   &
        itercnt_k, avgcol_k, avgerr_k, avgrms_k,                           &
        parea_k, pclon_k, pclat_k,                                         &
        o3colt1_k, o3colt2_k, o3colt3_k, o3errt1_k, o3errt2_k, o3errt3_k,  &
-       fitcolrs_k)
+       fitcolrs_k, sw_k, ap_k, cl_k)
 
     IMPLICIT NONE
 
@@ -362,7 +364,7 @@ CONTAINS
     ! Input variables
     ! ---------------
     INTEGER (KIND=i4), INTENT (IN) :: l2_swath_id, nxs, nxe, nts, nte
-    INTEGER (KIND=i4), INTENT (IN) :: nfs, nfe, nfecl
+    INTEGER (KIND=i4), INTENT (IN) :: nfs, nfe, nfecl, nls, nle
 
     ! ----------------
     ! Output variables
@@ -399,11 +401,18 @@ CONTAINS
     ! gga to be able to read Reference sector corrected total columns
     REAL    (KIND=r8), DIMENSION(nxs:nxe,nts:nte),        OPTIONAL, INTENT (OUT) :: fitcolrs_k
 
+    ! Scatterng weights and apriori
+    REAL    (KIND=r8), DIMENSION (nxs:nxe,nts:nte,nls:nle), OPTIONAL, INTENT (OUT) :: sw_k
+    REAL    (KIND=r8), DIMENSION (nxs:nxe,nts:nte,nls:nle), OPTIONAL, INTENT (OUT) :: ap_k
+    REAL    (KIND=r8), DIMENSION (nxs:nxe,nts:nte,nls:nle), OPTIONAL, INTENT (OUT) :: cl_k
+
+
     ! ---------------
     ! Local variables
     ! ---------------
     INTEGER (KIND=i4)                 :: locestat
-    INTEGER (KIND=i48)                :: iline, nxs48, nxe48, nts48, nte48, nfs48, nfe48, nfecl48
+    INTEGER (KIND=i48)                :: iline, nxs48, nxe48, nts48, nte48, nfs48, nfe48, nfecl48, &
+         nls48, nle48
     INTEGER (KIND=i48)                :: start_1d, stride_1d, edge_1d
     INTEGER (KIND=i48), DIMENSION (2) :: start_2d, stride_2d, edge_2d
     INTEGER (KIND=i48), DIMENSION (3) :: start_3d, stride_3d, edge_3d
@@ -417,6 +426,7 @@ CONTAINS
     nxs48 = INT(nxs,KIND=i48) ; nxe48 = INT(nxe,KIND=i48)
     nts48 = INT(nts,KIND=i48) ; nte48 = INT(nte,KIND=i48)
     nfs48 = INT(nfs,KIND=i48) ; nfe48 = INT(nfe,KIND=i48)
+    nls48 = INT(nls,KIND=i48) ; nle48 = INT(nle,KIND=i48)
     nfecl48 = INT(nfecl,KIND=i48)
 
     ! -------------------------
@@ -759,6 +769,35 @@ CONTAINS
        edge_2d   = (/       nxe48, nte48+1_i48 /)
        locestat = HE5_SWrdfld ( l2_swath_id, 'SlantColumnUncertaintyTemperatureT3', &
             start_2d, stride_2d, edge_2d, o3errt3_k(nxs:nxe,nts:nte) )
+       IF ( locestat /= he5_stat_ok ) he5stat = MAX ( he5stat, estat_error )
+    END IF
+
+    ! --------------------------------------------
+    ! Read scattering weights, a-priori profiles &
+    ! climatology levels
+    ! --------------------------------------------
+    IF ( PRESENT ( sw_k ) ) THEN
+       start_3d  = (/ nxs48-1_i48,       nts48, nls48-1_i48 /)
+       stride_3d = (/       1_i48,       1_i48,       1_i48 /)
+       edge_3d   = (/       nxe48, nte48+1_i48,       nle48 /)
+       locestat = HE5_SWrdfld ( l2_swath_id, 'ScatteringWeights', &
+            start_3d, stride_3d, edge_3d, sw_k(nxs:nxe,nts:nte,nls:nle) )
+       IF ( locestat /= he5_stat_ok ) he5stat = MAX ( he5stat, estat_error )
+    END IF
+    IF ( PRESENT ( ap_k ) ) THEN
+       start_3d  = (/ nxs48-1_i48,       nts48, nls48-1_i48 /)
+       stride_3d = (/       1_i48,       1_i48,       1_i48 /)
+       edge_3d   = (/       nxe48, nte48+1_i48,       nle48 /)
+       locestat = HE5_SWrdfld ( l2_swath_id, 'GasProfile', &
+            start_3d, stride_3d, edge_3d, ap_k(nxs:nxe,nts:nte,nls:nle) )
+       IF ( locestat /= he5_stat_ok ) he5stat = MAX ( he5stat, estat_error )
+    END IF
+    IF ( PRESENT ( cl_k ) ) THEN
+       start_3d  = (/ nxs48-1_i48,       nts48, nls48-1_i48 /)
+       stride_3d = (/       1_i48,       1_i48,       1_i48 /)
+       edge_3d   = (/       nxe48, nte48+1_i48,       nle48 /)
+       locestat = HE5_SWrdfld ( l2_swath_id, 'ClimatologyLevels', &
+            start_3d, stride_3d, edge_3d, cl_k(nxs:nxe,nts:nte,nls:nle) )
        IF ( locestat /= he5_stat_ok ) he5stat = MAX ( he5stat, estat_error )
     END IF
 
