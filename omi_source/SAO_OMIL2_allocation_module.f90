@@ -25,5 +25,6 @@ MODULE SAO_OMIL2_allocation_module
   REAL    (KIND=r8), DIMENSION (:,:), ALLOCATABLE :: col_reg, col_cor, col_err, &
                                                      slt_reg, slt_cor, slt_err, &
                                                      col_rms, srf_alb
+  REAL    (KIND=r8), DIMENSION(:,:,:), ALLOCATABLE :: sw, ap, cl
 
 END MODULE SAO_OMIL2_allocation_module
