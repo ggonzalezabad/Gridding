@@ -22,6 +22,7 @@ PROGRAM omi_sao_avg
   LOGICAL :: yn_gpix_weight  ! Ground-pixel size weighted gridding
   LOGICAL :: yn_ucert_weight ! Uncertainty-weighted gridding
   LOGICAL :: yn_amf_geo      ! Geometric air mass factor
+  LOGICAL :: yn_scat         ! Compute scattering weights, a-priori and levels average
 
   ! -----------------------------------------------------
   ! Normazliation value for uncertainty-weighted gridding
@@ -71,8 +72,8 @@ PROGRAM omi_sao_avg
      yn_amf_geo, yn_remove_bg,                                        &
      qflg_max, szamax, cld_frc_min, cld_frc_max, errwght,             &
      lonmin, lonmax, dlongr, latmin, latmax, dlatgr,                  &
-     xtrackmin, xtrackmax                                             )
-  
+     xtrackmin, xtrackmax, yn_scat                                    )
+  print*, yn_scat
   ! -----------------------
   ! Set up the lon/lat grid
   ! -----------------------------------------------------------------------------------
@@ -90,7 +91,7 @@ PROGRAM omi_sao_avg
        cld_frc_max, yn_gpix_weight, yn_ucert_weight, errwght,        &
        yn_use_rbszoom, yn_amf_geo, qflg_max,                         &
        yn_remove_bg, yn_norm_output, TRIM(ADJUSTL(output_format)),   &
-       TRIM(ADJUSTL(swathname)), xtrackmin, xtrackmax                )
+       TRIM(ADJUSTL(swathname)), xtrackmin, xtrackmax, yn_scat       )
 
   STOP 
 END PROGRAM omi_sao_avg
@@ -102,7 +103,7 @@ SUBROUTINE gridding_process (                                        &
        cld_frc_max, yn_gpix_weight, yn_ucert_weight, errwght,        &
        yn_use_rbszoom, yn_amf_geo, qflg_max,                         &
        yn_remove_bg, yn_norm_output, output_format, swathname,       &
-       xtrackmin, xtrackmax                                          )
+       xtrackmin, xtrackmax, yn_scat                                 )
 
   USE SAO_OMIL2_ReadLib_basic_module
   USE SAO_OMIL2_ReadLib_he5_module
@@ -119,7 +120,7 @@ SUBROUTINE gridding_process (                                        &
   ! ---------------
   CHARACTER (LEN=*), INTENT (IN) :: pge_esdt, listfile, outfile, output_format, swathname
   LOGICAL,           INTENT (IN) :: yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom
-  LOGICAL,           INTENT (IN) :: yn_norm_output, yn_remove_bg, yn_amf_geo
+  LOGICAL,           INTENT (IN) :: yn_norm_output, yn_remove_bg, yn_amf_geo, yn_scat
   INTEGER (KIND=i4), INTENT (IN) :: nlongr, nlatgr
   REAL    (KIND=r8), INTENT (IN) :: errwght
   REAL    (KIND=r4), INTENT (IN) :: dlongr, dlatgr
@@ -254,7 +255,7 @@ SUBROUTINE gridding_process (                                        &
           nlongr, nlatgr, dlongr, dlatgr, grid_lon(1:nlongr), grid_lat(1:nlatgr), &
           latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max,       &
           max_area, yn_gpix_weight, yn_ucert_weight, errwght, yn_use_rbszoom,     &
-          yn_amf_geo, yn_remove_bg, qflg_max, xtrackmin, xtrackmax  )
+          yn_amf_geo, yn_remove_bg, qflg_max, xtrackmin, xtrackmax, yn_scat  )
 
      ! --------------------------------
      ! Detach from swath and close file
@@ -440,7 +441,7 @@ SUBROUTINE datafile_loop (                                             &
      latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max, &
      max_area, yn_gpix_weight, yn_ucert_weight, errwght,               &
      yn_use_rbszoom, yn_amf_geo, yn_remove_bg, qflg_max,               &
-     xtrack_min, xtrack_max)
+     xtrack_min, xtrack_max, yn_scat)
 
   USE SAO_OMIL2_ReadLib_basic_module
   USE SAO_OMIL2_ReadLib_he5_module
@@ -465,7 +466,7 @@ SUBROUTINE datafile_loop (                                             &
   REAL    (KIND=r4), INTENT (IN) :: max_area, dlongr, dlatgr
   REAL    (KIND=r8), INTENT (IN) :: errwght
   LOGICAL,           INTENT (IN) :: yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom
-  LOGICAL,           INTENT (IN) :: yn_remove_bg, yn_amf_geo
+  LOGICAL,           INTENT (IN) :: yn_remove_bg, yn_amf_geo, yn_scat
   REAL    (KIND=r4), DIMENSION (1:nlongr), INTENT (IN) :: grid_lon
   REAL    (KIND=r4), DIMENSION (1:nlatgr), INTENT (IN) :: grid_lat
   INTEGER (KIND=i2),                       INTENT (IN) :: qflg_max, xtrack_min, xtrack_max
@@ -553,9 +554,11 @@ SUBROUTINE datafile_loop (                                             &
   ALLOCATE ( slt_reg(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_reg'
   ALLOCATE ( slt_cor(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_cor'
   ALLOCATE ( slt_err(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_err'
-  ALLOCATE ( sw(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'sw'
-  ALLOCATE ( ap(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'ap'
-  ALLOCATE ( cl(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'cl'
+  IF (yn_scat) THEN
+     ALLOCATE ( sw(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'sw'
+     ALLOCATE ( ap(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'ap'
+     ALLOCATE ( cl(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'cl'
+  END IF
 
 
   ! ------------------------------------------------------------------
@@ -646,15 +649,17 @@ SUBROUTINE datafile_loop (                                             &
   ! -------------------------------------------------
   ! Read scattering weights and a priori gas profiles
   ! -------------------------------------------------
-  CALL saopge_l2_read_datafields (                                      &
-       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
-       sw_k=sw)
-  CALL saopge_l2_read_datafields (                                      &
-       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
-       ap_k=ap)
-  CALL saopge_l2_read_datafields (                                      &
-       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
-       cl_k=cl)
+  IF (yn_scat) THEN
+     CALL saopge_l2_read_datafields (                                      &
+          he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+          sw_k=sw)
+     CALL saopge_l2_read_datafields (                                      &
+          he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+          ap_k=ap)
+     CALL saopge_l2_read_datafields (                                      &
+          he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+          cl_k=cl)
+  END IF
 
   ! -----------------------------------
   ! Set range of cross-track positions
@@ -784,9 +789,11 @@ SUBROUTINE datafile_loop (                                             &
   IF ( ALLOCATED(slt_reg) ) DEALLOCATE (slt_reg)
   IF ( ALLOCATED(slt_cor) ) DEALLOCATE (slt_cor)
   IF ( ALLOCATED(slt_err) ) DEALLOCATE (slt_err)
-  IF ( ALLOCATED(sw) ) DEALLOCATE (sw)
-  IF ( ALLOCATED(ap) ) DEALLOCATE (ap)
-  IF ( ALLOCATED(cl) ) DEALLOCATE (cl)
+  IF (yn_scat) THEN
+     IF ( ALLOCATED(sw) ) DEALLOCATE (sw)
+     IF ( ALLOCATED(ap) ) DEALLOCATE (ap)
+     IF ( ALLOCATED(cl) ) DEALLOCATE (cl)
+  END IF
 
   RETURN
 END SUBROUTINE datafile_loop
@@ -1191,7 +1198,7 @@ SUBROUTINE omi_avg_read_input (                                       &
      yn_amf_geo,  yn_remove_bg,                                       &
      qflg_max, szamax, cld_frc_min, cld_frc_max, errwght,             &
      lonmin, lonmax, dlongr, latmin, latmax, dlatgr,                  &
-     xtrackmin, xtrackmax                                             )
+     xtrackmin, xtrackmax, yn_scat                                    )
 
   USE SAO_OMIL2_ReadLib_basic_module, ONLY: i2, i4, r4, r8
   IMPLICIT NONE
@@ -1206,7 +1213,7 @@ SUBROUTINE omi_avg_read_input (                                       &
   ! ----------------
   CHARACTER (LEN=*),   INTENT (OUT) :: pge_esdt, listfile, outfile, output_format, swathname
   LOGICAL,             INTENT (OUT) :: yn_norm_output, yn_gpix_weight, yn_ucert_weight, yn_use_rbszoom
-  LOGICAL,             INTENT (OUT) :: yn_amf_geo, yn_remove_bg
+  LOGICAL,             INTENT (OUT) :: yn_amf_geo, yn_remove_bg, yn_scat
   INTEGER   (KIND=i2), INTENT (OUT) :: qflg_max, xtrackmin, xtrackmax
   REAL      (KIND=r8), INTENT (OUT) :: errwght
   REAL      (KIND=r4), INTENT (OUT) :: szamax, cld_frc_min, cld_frc_max
@@ -1237,6 +1244,7 @@ SUBROUTINE omi_avg_read_input (                                       &
   CHARACTER (LEN=25), PARAMETER :: fm_amfg = 'Geometric air mass factor'
   CHARACTER (LEN=22), PARAMETER :: fm_bgrm = 'HCHO remove background'
   CHARACTER (LEN=18), PARAMETER :: fm_xtra = 'xtrack pixel range'
+  CHARACTER (LEN=26), PARAMETER :: fm_scat = 'scattering weights average'
 
   ! -----------------------
   ! Open input control file
@@ -1368,6 +1376,13 @@ SUBROUTINE omi_avg_read_input (                                       &
   REWIND(ipunit)
   CALL skip_to_filemark (ipunit, fm_xtra, yn_fail) ; IF ( yn_fail ) STOP 1
   READ (ipunit, *) xtrackmin, xtrackmax
+
+  ! ----------------------------------
+  ! Scattering weights average logical
+  ! ----------------------------------
+  REWIND(ipunit)
+  CALL skip_to_filemark (ipunit, fm_scat, yn_fail) ; IF ( yn_fail ) STOP 1
+  READ (ipunit, *) yn_scat
 
   CLOSE ( ipunit )
 
