@@ -382,11 +382,6 @@ SUBROUTINE gridding_process (                                        &
 
   END IF
 
-
-  write(*,*) gsca_wei(291,217,:)
-  write(*,*) gapr_gas(291,217,:)
-  write(*,*) gcli_lev(291,217,:)
-
   ! --------------------------
   ! Write output to file
   ! --------------------------
@@ -407,7 +402,7 @@ SUBROUTINE gridding_process (                                        &
           TRIM(ADJUSTL(outfile)), nlongr, nlatgr,         &
           grid_lon(1:nlongr), grid_lat(1:nlatgr), dlongr, &
           dlatgr, cld_frc_min, cld_frc_max, qflg_max,     &
-          xtrackmin, xtrackmax                            )
+          xtrackmin, xtrackmax, yn_scat, nLev             )
 
      CALL write_he5_data_r4 ( 'SurfaceAlbedo',     nlongr, nlatgr,       &
           gcol_alb(1:nlongr,1:nlatgr), good_norm(idx_alb)           )

@@ -14,9 +14,11 @@ MODULE SAO_OMIL2_CreateHDF5_module
   ! -------------------------------------
   ! Names with dimensions and data fields
   ! -------------------------------------
-  CHARACTER (LEN=10), PARAMETER :: nlondim  = 'nLongitude', gridlons = 'Longitudes'
-  CHARACTER (LEN= 9), PARAMETER :: nlatdim  = 'nLatitude',  gridlats = 'Latitudes'
-  CHARACTER (LEN=20), PARAMETER :: nlatlon  = nlondim//','//nlatdim
+  CHARACTER (LEN=10), PARAMETER :: nlondim     = 'nLongitude', gridlons = 'Longitudes'
+  CHARACTER (LEN= 9), PARAMETER :: nlatdim     = 'nLatitude',  gridlats = 'Latitudes'
+  CHARACTER (LEN= 6), PARAMETER :: nlevdim     = 'nLevel'
+  CHARACTER (LEN=20), PARAMETER :: nlatlon     = nlondim//','//nlatdim
+  CHARACTER (LEN=27), PARAMETER :: nlatlonlev  = nlondim//','//nlatdim//','//nlevdim
 
 
   ! ------------------------------------------
@@ -29,6 +31,7 @@ MODULE SAO_OMIL2_CreateHDF5_module
 
   INTEGER (KIND=i48)               :: he5_start_1, he5_stride_1, he5_edge_1
   INTEGER (KIND=i48), DIMENSION(2) :: he5_start_2, he5_stride_2, he5_edge_2
+  INTEGER (KIND=i48), DIMENSION(3) :: he5_start_3, he5_stride_3, he5_edge_3
 
   ! --------------------------------------------------------
   ! Variables associated with field compression and chunking
@@ -53,7 +56,7 @@ CONTAINS
 
   SUBROUTINE create_he5_file ( &
        he5file, nlon, nlat, lons, lats, dlon, dlat, cld_frc_min, cld_frc_max, qflg_max, &
-        xtrack_min, xtrack_max, cld_prs_min_k, cld_prs_max_k                            )
+        xtrack_min, xtrack_max, yn_scat, nlev, cld_prs_min_k, cld_prs_max_k)
 
     !------------------------------------------------------------------------------
     ! This subroutine creates an HE5 file with gridded averages of SAO PGEs
@@ -62,6 +65,7 @@ CONTAINS
     !   he5file     - name of HE5 output file
     !   nlon        - number of longitudes
     !   nlat        - number of latitudes
+    !   nlev        - number of levels
     !   lons        - grid longitudes
     !   lats        - grid latitudes
     !   dlon        - longitude grid spacing
@@ -82,12 +86,13 @@ CONTAINS
     ! Input variables
     ! ---------------
     CHARACTER (LEN=*),                  INTENT (IN) :: he5file
-    INTEGER (KIND=i4),                  INTENT (IN) :: nlon, nlat
+    INTEGER (KIND=i4),                  INTENT (IN) :: nlon, nlat, nlev
     INTEGER (KIND=i2),                  INTENT (IN) :: qflg_max, xtrack_min, xtrack_max
     REAL    (KIND=r4),                  INTENT (IN) :: dlon, dlat, cld_frc_min, cld_frc_max
     REAL    (KIND=r4), DIMENSION(nlon), INTENT (IN) :: lons
     REAL    (KIND=r4), DIMENSION(nlat), INTENT (IN) :: lats
     REAL    (KIND=r4), OPTIONAL,        INTENT (IN) :: cld_prs_min_k, cld_prs_max_k
+    LOGICAL,                            INTENT (IN) :: yn_scat
     
     he5stat = 0
 
@@ -117,6 +122,12 @@ CONTAINS
     he5stat = HE5_SWdefdim  ( swath_id, nlatdim, INT(nlat, KIND=i48) )
     IF ( he5stat /= 0 ) THEN
        WRITE (*,*) 'ERROR: HE5_SWdefdim failed for swath dimensions!'; STOP 1
+    END IF
+    IF (yn_scat) THEN
+       he5stat = HE5_SWdefdim  ( swath_id, nlevdim, INT(nlev, KIND=i48) )
+       IF ( he5stat /= 0 ) THEN
+          WRITE (*,*) 'ERROR: HE5_SWdefdim failed for swath dimensions nelv!'; STOP 1
+       END IF
     END IF
 
     ! -----------------------------------------------
@@ -155,6 +166,11 @@ CONTAINS
     he5stat = HE5_SWdefdfld (swath_id,'SurfaceAlbedo',         nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
     he5stat = HE5_SWdefdfld (swath_id,'SurfaceAltitude',       nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )   
     he5stat = HE5_SWdefdfld (swath_id,'RMS          ',         nlatlon," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
+    IF (yn_scat) THEN
+       he5stat = HE5_SWdefdfld (swath_id,'ScatteringWeights', nlatlonlev," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
+       he5stat = HE5_SWdefdfld (swath_id,'A-priori         ', nlatlonlev," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
+       he5stat = HE5_SWdefdfld (swath_id,'LevelCenter      ', nlatlonlev," ",HE5T_Native_FLOAT,he5_hdfe_nomerge )
+    END IF
 
     ! -------------------------------------------------------------------------------
     ! Detach from and re-attach to created swath (recommended before adding to swath)
