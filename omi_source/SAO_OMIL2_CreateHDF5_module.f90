@@ -270,6 +270,58 @@ CONTAINS
     RETURN
   END SUBROUTINE write_he5_data_r4
 
+  SUBROUTINE write_he5_data_r4_3D ( fieldname, nlon, nlat, nlev, grid_3d )
+
+    !------------------------------------------------------------------------------
+    ! This subroutine write r4 values to the HE5 file
+    !
+    ! Input:
+    !   fieldname  - string with the field name to write to
+    !   nlon       - number of longitudes
+    !   nlat       - number of latitudes
+    !   nlev       - number of levels
+    !   grid_3d    - gridded data to write to file
+    !------------------------------------------------------------------------------
+
+    IMPLICIT NONE
+
+    ! ---------------
+    ! Input variables
+    ! ---------------
+    CHARACTER (LEN=*),                         INTENT (IN)    :: fieldname
+    INTEGER,                                   INTENT (IN)    :: nlon, nlat, nlev
+    REAL(KIND=r4), DIMENSION (nlon,nlat,nlev), INTENT (INOUT) :: grid_3d
+
+    ! ------------------------------------------------
+    ! Skip writing if we don't have a valid Field Name
+    ! ------------------------------------------------
+    IF ( LEN_TRIM(ADJUSTL(fieldname)) <= 0 ) RETURN
+
+    ! -------------------------
+    ! Round-Off of gridded data
+    ! -------------------------
+    CALL roundoff_3darr_r4 ( n_roff_dig, nlon, nlat, nlev, r8MissVal_r4, grid_3d(1:nlon,1:nlat,1:nlev) )
+
+    ! ------------------------
+    ! Write the gridded arrays
+    ! ------------------------
+    he5_start_3  = (/ 0_i48,                           0_i48,              0_i48 /)
+    he5_stride_3 = (/ 1_i48,                           1_i48,              1_i48 /)
+    he5_edge_3   = (/ INT(nlon,KIND=i48), INT(nlat,KIND=i48), INT(nlev,KIND=i48) /)
+
+    he5stat = HE5_SWwrfld   ( swath_id, TRIM(ADJUSTL(fieldname)),     &
+         he5_start_3, he5_stride_3, he5_edge_3, grid_3d(1:nlon,1:nlat,1:nlev)  )
+    he5stat = HE5_SWwrlattr ( swath_id, TRIM(ADJUSTL(fieldname)),     &
+         "MissingValue", HE5T_NATIVE_FLOAT, 1_i48, r8MissVal_r4             )
+    IF ( he5stat /= 0 ) THEN
+       WRITE (*,*) 'ERROR: HE5_SWdwrfld failed for '//TRIM(ADJUSTL(fieldname))
+       STOP 1
+    END IF
+
+
+    RETURN
+  END SUBROUTINE write_he5_data_r4_3D
+
   SUBROUTINE write_he5_data_i4 ( fieldname, nlon, nlat, grid_2d, scale_fac )
 
     !------------------------------------------------------------------------------
@@ -512,6 +564,51 @@ CONTAINS
   
     RETURN
   END SUBROUTINE roundoff_2darr_r4
+
+  SUBROUTINE roundoff_3darr_r4 ( ndecim, n1, n2, n3, missval, r4value )
+  
+    IMPLICIT NONE
+  
+    ! ---------------
+    ! Input variables
+    ! ---------------
+    INTEGER (KIND=i4),                       INTENT (IN)    :: ndecim, n1, n2, n3
+    REAL    (KIND=r4),                       INTENT (IN)    :: missval
+    REAL    (KIND=r4), DIMENSION (n1,n2,n3), INTENT (INOUT) :: r4value
+  
+    ! ---------------
+    ! Local variables
+    ! ---------------
+    INTEGER (KIND=i4) :: pow, i, j, k
+    REAL    (KIND=r4) :: tmpval, r4val
+  
+    DO i = 1, n1
+       DO j = 1, n2
+          DO k = 1, n3
+             r4val = r4value(i,j,k)
+             IF ( r4val == 0.0_r4 .OR. r4val <= missval ) CYCLE
+             
+             ! ---------------------------------
+             ! Power of 10 of the original value
+             ! ---------------------------------
+             pow = INT ( LOG10 (ABS(r4val)), KIND=i4 )
+             
+             ! ------------------------------------------------------
+             ! Remove original power of 10 and shift by NDECIM powers
+             ! ------------------------------------------------------
+             tmpval = r4val * 10.0_r4**(ndecim-pow)
+             
+             ! ---------------------------------------------
+             ! Find the nearest INTEGER and undo power-shift
+             ! ---------------------------------------------
+             r4value(i,j,k) = ANINT ( tmpval )  * 10.0_r4**(pow-ndecim)
+             
+          END DO
+       END DO
+    END DO
+  
+    RETURN
+  END SUBROUTINE roundoff_3darr_r4
 
 
 END MODULE SAO_OMIL2_CreateHDF5_module
