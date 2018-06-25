@@ -132,7 +132,7 @@ SUBROUTINE gridding_process (                                        &
   ! ------------------------------
   ! Local Variables and Parameters
   ! ------------------------------
-  INTEGER (KIND=i4) :: i, ilon, ilat, ios
+  INTEGER (KIND=i4) :: i, ilon, ilat, ios, il
 
   ! -----------
   ! OMI L2 data
@@ -186,11 +186,6 @@ SUBROUTINE gridding_process (                                        &
   ALLOCATE ( gsrf_alt(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gsrf_alt'
   ALLOCATE ( gcld_cfr(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcld_cfr'
   ALLOCATE ( gcld_ctp(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcld_ctp'
-  IF (yn_scat) THEN
-     ALLOCATE ( gsca_wei(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gsca_wei'
-     ALLOCATE ( gapr_gas(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gapr_gas'
-     ALLOCATE ( gcli_lev(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcli_lev'
-  END IF
 
   ! ------------------------
   ! Initialize output arrays
@@ -203,8 +198,7 @@ SUBROUTINE gridding_process (                                        &
   gslt_cor = 0.0_r4 ;  gslt_err = 0.0_r4
   gslt_aer = 0.0_r4 ;  gcol_rms = 0.0_r4
   gsrf_alt = 0.0_r4 ;  gcld_cfr = 0.0_r4
-  gcld_ctp = 0.0_r4 ;  gsca_wei = 0.0_r4
-  gapr_gas = 0.0_r4 ;  gcli_lev = 0.0_r4
+  gcld_ctp = 0.0_r4
 
   ! ------------------------------------------------------------------
   ! Calculate the maximally possible area a tessellated pixel may have
@@ -249,6 +243,18 @@ SUBROUTINE gridding_process (                                        &
 
      CALL saopge_l2_read_dimensions ( he5stat, l2_swath_id, nTimes_k=nTimes, nXtrack_k=nXtrack, &
           nlev_k=nlev )
+
+     ! -------------------------------------------------------------------------
+     ! Allocate variables for scattering weights, apriori and climatology levels
+     ! It has to be done here since there is no info for nlev before
+     ! -------------------------------------------------------------------------
+     IF (yn_scat .AND. (.NOT. ALLOCATED(gsca_wei)) ) THEN
+        ALLOCATE ( gsca_wei(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gsca_wei'
+        ALLOCATE ( gapr_gas(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gapr_gas'
+        ALLOCATE ( gcli_lev(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcli_lev'
+        gsca_wei = 0.0_r4 ; gapr_gas = 0.0_r4 ;  gcli_lev = 0.0_r4
+     END IF
+
 
      IF ( he5stat /= 0 .OR. l2_swathfile_id < 0 ) THEN
         he5stat = HE5_SWdetach ( l2_swath_id )
@@ -297,6 +303,15 @@ SUBROUTINE gridding_process (                                        &
            gcld_cfr(ilon,ilat) = gcld_cfr(ilon,ilat) * frac
            gcld_ctp(ilon,ilat) = gcld_ctp(ilon,ilat) * frac
            gcol_rms(ilon,ilat) = gcol_rms(ilon,ilat) * frac
+
+           IF (yn_scat) THEN
+              DO il = 1, nLev
+                 gsca_wei(ilon,ilat,il) = gsca_wei(ilon,ilat,il) * frac
+                 gapr_gas(ilon,ilat,il) = gapr_gas(ilon,ilat,il) * frac
+                 gcli_lev(ilon,ilat,il) = gcli_lev(ilon,ilat,il) * frac
+              END DO
+           END IF
+
            ! ------------------------------------------------------------------
            ! GCOL_ERR holds the sum of the inverse squares of the unweighted
            ! fitting uncertainties. The final uncertainties are the SQRT of
@@ -326,6 +341,11 @@ SUBROUTINE gridding_process (                                        &
            gcld_cfr(ilon,ilat) = r4missval
            gcld_ctp(ilon,ilat) = r4missval
            gcol_rms(ilon,ilat) = r4missval
+           IF (yn_scat) THEN
+              gsca_wei(ilon,ilat,1:nLev) = r4missval
+              gapr_gas(ilon,ilat,1:nLev) = r4missval
+              gcli_lev(ilon,ilat,1:nLev) = r4missval
+           END IF
         END IF
      END DO
   END DO
@@ -361,6 +381,11 @@ SUBROUTINE gridding_process (                                        &
           gcol_rms(1:nlongr,1:nlatgr), good_norm(idx_rms)   )
 
   END IF
+
+
+  write(*,*) gsca_wei(291,217,:)
+  write(*,*) gapr_gas(291,217,:)
+  write(*,*) gcli_lev(291,217,:)
 
   ! --------------------------
   ! Write output to file
@@ -771,7 +796,8 @@ SUBROUTINE datafile_loop (                                             &
              col_reg(ix,it), col_cor(ix,it), col_err(ix,it), col_rms(ix,it), &
              srf_alb(ix,it), slt_reg(ix,it), slt_cor(ix,it), slt_err(ix,it), &
              amf(ix,it), srf_alt(ix,it), cld_cfr(ix,it), cld_ctp(ix,it),     &
-             yn_gpix_weight, yn_ucert_weight, errwght        )
+             yn_gpix_weight, yn_ucert_weight, errwght, sw(ix,it,1:nLev),     &
+             ap(ix,it,1:nLev), cl(ix,it,1:nLev), nLev, yn_scat )
            
      END DO xtrack
   END DO swathlines
@@ -815,7 +841,8 @@ SUBROUTINE gridding_loop (                                           &
      tess_idx, tess_satpix, tess_pars, tess_orient, tess_idx_abs,    &
      dateline_offset, max_area, col_reg, col_cor, col_err, col_rms,  &
      srf_alb, slt_reg, slt_cor, slt_err, amf, srf_alt, cld_cfr,      &
-     cld_ctp, yn_gpix_weight, yn_ucert_weight, errwght               )
+     cld_ctp, yn_gpix_weight, yn_ucert_weight, errwght, scat, apri,  &
+     clim, nLev, yn_scat )
 
   USE SAO_OMIL2_ReadLib_basic_module
   USE SAO_OMIL2_ReadLib_he5_module
@@ -824,13 +851,14 @@ SUBROUTINE gridding_loop (                                           &
                                          gcol_reg, gcol_cor, gcol_err, &
                                          gslt_reg, gslt_cor, gslt_err, &
                                          gcol_amf, gslt_aer, gcol_rms, &
-                                         gsrf_alt, gcld_cfr, gcld_ctp
+                                         gsrf_alt, gcld_cfr, gcld_ctp, &
+                                         gsca_wei, gapr_gas, gcli_lev
   IMPLICIT NONE
 
   ! ---------------
   ! Input variables
   ! ---------------
-  INTEGER (KIND=i4),                          INTENT (IN) :: nlongr, nlatgr, nlon_tess, nlat_tess
+  INTEGER (KIND=i4),                          INTENT (IN) :: nlongr, nlatgr, nlon_tess, nlat_tess, nLev
   INTEGER (KIND=i4),                          INTENT (IN) :: dateline_offset, tess_orient
   REAL    (KIND=r8), DIMENSION (1:nlon_tess), INTENT (IN) :: tess_lonpts
   REAL    (KIND=r8), DIMENSION (1:nlat_tess), INTENT (IN) :: tess_latpts
@@ -842,9 +870,10 @@ SUBROUTINE gridding_loop (                                           &
   REAL    (KIND=r8), DIMENSION (4,2),         INTENT (IN) :: tess_satpix
   REAL    (KIND=r8),                          INTENT (IN) :: col_reg, col_cor, col_err, col_rms
   REAL    (KIND=r8),                          INTENT (IN) :: slt_reg, slt_cor, slt_err, srf_alb
+  REAL    (KIND=r8), DIMENSION (1:nLev),      INTENT (IN) :: scat, apri, clim
   REAL    (KIND=r4),                          INTENT (IN) :: amf, cld_cfr, cld_ctp
   INTEGER (KIND=i2),                          INTENT (IN) :: srf_alt
-  LOGICAL,                                    INTENT (IN) :: yn_gpix_weight, yn_ucert_weight
+  LOGICAL,                                    INTENT (IN) :: yn_gpix_weight, yn_ucert_weight, yn_scat
 
   ! ------------------
   ! Modified variables
@@ -859,7 +888,7 @@ SUBROUTINE gridding_loop (                                           &
   REAL    (KIND=r8), DIMENSION (1:nlon_tess,1:nlat_tess) :: tess_area
   REAL    (KIND=r8), DIMENSION (1:nlat_tess,1:nlon_tess) :: tess_area_T
 
-  INTEGER (KIND=i4) :: i, j, ilat, ilon
+  INTEGER (KIND=i4) :: i, j, ilat, ilon, il
   REAL    (KIND=r8) :: tess_sum, max_area_r8, frac, errtmp, col_err_norm, &
                        tess_sum_slt, frac_slt, errtmp_slt,  slt_err_norm
 
@@ -964,6 +993,17 @@ SUBROUTINE gridding_loop (                                           &
            gslt_reg(ilon,ilat) = gslt_reg(ilon,ilat) + REAL(tess_area(i,j)*slt_reg * frac_slt, KIND=r4)
            gslt_cor(ilon,ilat) = gslt_cor(ilon,ilat) + REAL(tess_area(i,j)*slt_cor * frac_slt, KIND=r4)
 
+           ! -----------------------------------------------------------
+           ! Compute scattering weights, a-priori and climatology levels
+           ! -----------------------------------------------------------
+           IF (yn_scat) THEN
+              DO il = 1, nLev
+                 gsca_wei(ilon,ilat,il) = gsca_wei(ilon,ilat,il) + REAL(tess_area(i,j)*scat(il)*frac, KIND=r4)
+                 gapr_gas(ilon,ilat,il) = gapr_gas(ilon,ilat,il) + REAL(tess_area(i,j)*apri(il)*frac, KIND=r4)
+                 gcli_lev(ilon,ilat,il) = gcli_lev(ilon,ilat,il) + REAL(tess_area(i,j)*clim(il)*frac, KIND=r4)
+              END DO
+           END IF
+           
            ! ----------------------------------------------------------------------
            ! To compute the weighted error, we have to add the inverse square of
            ! the individual errors and take the square root of the inverse at the
