@@ -73,7 +73,7 @@ PROGRAM omi_sao_avg
      qflg_max, szamax, cld_frc_min, cld_frc_max, errwght,             &
      lonmin, lonmax, dlongr, latmin, latmax, dlatgr,                  &
      xtrackmin, xtrackmax, yn_scat                                    )
-  print*, yn_scat
+  
   ! -----------------------
   ! Set up the lon/lat grid
   ! -----------------------------------------------------------------------------------
@@ -111,7 +111,8 @@ SUBROUTINE gridding_process (                                        &
   USE SAO_OMIL2_allocation_module, ONLY: &
        gcol_reg, gcol_cor, gcol_err, gcol_aer, gcol_alb, good_idx, &
        gcol_qfl, gcol_num, gcol_amf, gslt_reg, gslt_cor, gslt_err, &
-       gslt_aer, gcol_rms, gsrf_alt, gcld_cfr, gcld_ctp, gsrf_alt
+       gslt_aer, gcol_rms, gsrf_alt, gcld_cfr, gcld_ctp, gsrf_alt, &
+       gsca_wei, gapr_gas, gcli_lev
 
   IMPLICIT NONE
 
@@ -185,6 +186,11 @@ SUBROUTINE gridding_process (                                        &
   ALLOCATE ( gsrf_alt(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gsrf_alt'
   ALLOCATE ( gcld_cfr(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcld_cfr'
   ALLOCATE ( gcld_ctp(1:nlongr,1:nlatgr), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcld_ctp'
+  IF (yn_scat) THEN
+     ALLOCATE ( gsca_wei(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gsca_wei'
+     ALLOCATE ( gapr_gas(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gapr_gas'
+     ALLOCATE ( gcli_lev(1:nlongr,1:nlatgr,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'gcli_lev'
+  END IF
 
   ! ------------------------
   ! Initialize output arrays
@@ -197,7 +203,8 @@ SUBROUTINE gridding_process (                                        &
   gslt_cor = 0.0_r4 ;  gslt_err = 0.0_r4
   gslt_aer = 0.0_r4 ;  gcol_rms = 0.0_r4
   gsrf_alt = 0.0_r4 ;  gcld_cfr = 0.0_r4
-  gcld_ctp = 0.0_r4
+  gcld_ctp = 0.0_r4 ;  gsca_wei = 0.0_r4
+  gapr_gas = 0.0_r4 ;  gcli_lev = 0.0_r4
 
   ! ------------------------------------------------------------------
   ! Calculate the maximally possible area a tessellated pixel may have
@@ -430,6 +437,11 @@ SUBROUTINE gridding_process (                                        &
   IF ( ALLOCATED ( gsrf_alt ) )  DEALLOCATE ( gsrf_alt )
   IF ( ALLOCATED ( gcld_cfr ) )  DEALLOCATE ( gcld_cfr )
   IF ( ALLOCATED ( gcld_ctp ) )  DEALLOCATE ( gcld_ctp )
+  IF ( yn_scat) THEN
+     IF ( ALLOCATED ( gsca_wei ) )  DEALLOCATE ( gsca_wei )
+     IF ( ALLOCATED ( gapr_gas ) )  DEALLOCATE ( gapr_gas )
+     IF ( ALLOCATED ( gcli_lev ) )  DEALLOCATE ( gcli_lev )
+  END IF
 
   RETURN
 END SUBROUTINE gridding_process
