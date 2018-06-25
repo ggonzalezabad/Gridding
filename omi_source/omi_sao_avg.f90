@@ -137,7 +137,7 @@ SUBROUTINE gridding_process (                                        &
   ! -----------
   CHARACTER (LEN=maxchlen) :: l2_fname, l2_swath
   INTEGER   (KIND=i4)      :: he5stat, l2_swathfile_id, l2_swath_id
-  INTEGER   (KIND=i4)      :: nTimes, nXtrack
+  INTEGER   (KIND=i4)      :: nTimes, nXtrack, nLev
   REAL      (KIND=r4)      :: max_area
 
   ! --------------
@@ -239,7 +239,9 @@ SUBROUTINE gridding_process (                                        &
           he5stat, TRIM(ADJUSTL(l2_fname)), l2_swathfile_id, l2_swath_id, l2_swath )
      IF ( he5stat /= 0 .OR. l2_swathfile_id < 0 ) CYCLE
 
-     CALL saopge_l2_read_dimensions ( he5stat, l2_swath_id, nTimes_k=nTimes, nXtrack_k=nXtrack )
+     CALL saopge_l2_read_dimensions ( he5stat, l2_swath_id, nTimes_k=nTimes, nXtrack_k=nXtrack, &
+          nlev_k=nlev )
+
      IF ( he5stat /= 0 .OR. l2_swathfile_id < 0 ) THEN
         he5stat = HE5_SWdetach ( l2_swath_id )
         he5stat = HE5_SWclose  ( l2_swathfile_id )
@@ -248,7 +250,7 @@ SUBROUTINE gridding_process (                                        &
 
      CALL datafile_loop (                                                         &
           TRIM(ADJUSTL(pge_esdt)),                                                &
-          nXtrack, nTimes, l2_swathfile_id, l2_swath_id,                          &
+          nXtrack, nTimes, nLev, l2_swathfile_id, l2_swath_id,                    &
           nlongr, nlatgr, dlongr, dlatgr, grid_lon(1:nlongr), grid_lat(1:nlatgr), &
           latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max,       &
           max_area, yn_gpix_weight, yn_ucert_weight, errwght, yn_use_rbszoom,     &
@@ -433,7 +435,7 @@ END SUBROUTINE gridding_process
 
 SUBROUTINE datafile_loop (                                             &
      pge_esdt,                                                         &
-     nXtrack, nTimes, l2_swathfile_id, l2_swath_id,                    &
+     nXtrack, nTimes, nLev, l2_swathfile_id, l2_swath_id,              &
      nlongr, nlatgr, dlongr, dlatgr, grid_lon, grid_lat,               &
      latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max, &
      max_area, yn_gpix_weight, yn_ucert_weight, errwght,               &
@@ -448,14 +450,17 @@ SUBROUTINE datafile_loop (                                             &
        qflag, lat, lon, sza, srf_alb, srf_alt, amf, vza,   &
        corlat, corlon, col_rms, col_reg, col_cor, col_err, &
        slt_reg, slt_cor, slt_err, xtqf, amf, col_rms,     &
-       srf_alt, cld_cfr, cld_ctp, corflag, amfflag, xtqfe
+       srf_alt, cld_cfr, cld_ctp, corflag, amfflag, xtqfe, &
+       sw, ap, cl
+
   IMPLICIT NONE
 
   ! ---------------
   ! Input variables
   ! ---------------
   CHARACTER (LEN=*), INTENT (IN) :: pge_esdt
-  INTEGER (KIND=i4), INTENT (IN) :: nXtrack, nTimes, l2_swathfile_id, l2_swath_id, nlongr, nlatgr
+  INTEGER (KIND=i4), INTENT (IN) :: nXtrack, nTimes, l2_swathfile_id, l2_swath_id, nlongr, nlatgr, &
+       nLev
   REAL    (KIND=r4), INTENT (IN) :: latmin, latmax, lonmin, lonmax, szamax, cld_frc_min, cld_frc_max
   REAL    (KIND=r4), INTENT (IN) :: max_area, dlongr, dlatgr
   REAL    (KIND=r8), INTENT (IN) :: errwght
@@ -523,7 +528,6 @@ SUBROUTINE datafile_loop (                                             &
   REAL (KIND=r8), DIMENSION (nxtrack+1) :: xtravg, n_xtravg
   REAL (KIND=r8)                        :: mean_xtr, median_xtr, thresh_xtr
 
-
   ! -----------------------------
   ! ALLOCATE memory for OMI data
   ! -----------------------------
@@ -549,6 +553,9 @@ SUBROUTINE datafile_loop (                                             &
   ALLOCATE ( slt_reg(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_reg'
   ALLOCATE ( slt_cor(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_cor'
   ALLOCATE ( slt_err(1:nXtrack,0:nTimes-1), STAT=estat ) ; IF ( estat /= 0 ) STOP 'slt_err'
+  ALLOCATE ( sw(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'sw'
+  ALLOCATE ( ap(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'ap'
+  ALLOCATE ( cl(1:nXtrack,0:nTimes-1,1:nlev), STAT=estat ) ; IF ( estat /= 0 ) STOP 'cl'
 
 
   ! ------------------------------------------------------------------
@@ -568,29 +575,31 @@ SUBROUTINE datafile_loop (                                             &
        TerHgt_k=srf_alt, XTQFE_k = xtqfe)
 
   CALL saopge_l2_read_datafields (                                         &
-       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0,             &
+       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev,    &
        fitcol_k=col_reg, fiterr_k=col_err, fitrms_k=col_rms,               &
        qaflg_k=qflag, pclon_k=corlon, pclat_k=corlat, fitcolrs_k=col_cor)
   
   ! ------------------
   ! Screen for clouds. 
   ! ------------------
-  CALL saopge_l2_read_datafields (                              &
-       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0,  &
+  CALL saopge_l2_read_datafields (                                      &
+       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
        amfcfr_k=cld_cfr                                           )
-  CALL saopge_l2_read_datafields (                              &
-       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0,  &
+  CALL saopge_l2_read_datafields (                                      &
+       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
        amfprs_k=cld_ctp                                           )
 
   ! ------------------------------------------------
   ! Read molecular or geometric AMF & AMF diagnostic
   ! ------------------------------------------------
   IF (.NOT. yn_amf_geo) THEN
-     CALL saopge_l2_read_datafields (                                       &
-          he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, amf_k=amf, amfdiag_k=amfflag)
+     CALL saopge_l2_read_datafields (                                      &
+          he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+          amf_k=amf, amfdiag_k=amfflag)
   ELSE IF (yn_amf_geo) THEN
-     CALL saopge_l2_read_datafields (                                       &
-          he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, amfgeo_k=amf )
+     CALL saopge_l2_read_datafields (                                      &
+          he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+          amfgeo_k=amf )
   ENDIF
 
   ! ---------------------------------------------------------------
@@ -615,8 +624,9 @@ SUBROUTINE datafile_loop (                                             &
   ! --------------------
   ! Read surface albedo.
   ! --------------------
-  CALL saopge_l2_read_datafields (                              &
-       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, amfalb_k=srf_alb )
+  CALL saopge_l2_read_datafields (                                      &
+       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+       amfalb_k=srf_alb )
 
   ! ------------------------------
   ! Read reference correction flag
@@ -632,6 +642,19 @@ SUBROUTINE datafile_loop (                                             &
   ELSE
      bgval = 0.0_r4
   END IF
+
+  ! -------------------------------------------------
+  ! Read scattering weights and a priori gas profiles
+  ! -------------------------------------------------
+  CALL saopge_l2_read_datafields (                                      &
+       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+       sw_k=sw)
+  CALL saopge_l2_read_datafields (                                      &
+       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+       ap_k=ap)
+  CALL saopge_l2_read_datafields (                                      &
+       he5stat, l2_swath_id, 1, nXtrack, 0, nTimes-1, 0, 0, 0, 1, nLev, &
+       cl_k=cl)
 
   ! -----------------------------------
   ! Set range of cross-track positions
@@ -761,6 +784,9 @@ SUBROUTINE datafile_loop (                                             &
   IF ( ALLOCATED(slt_reg) ) DEALLOCATE (slt_reg)
   IF ( ALLOCATED(slt_cor) ) DEALLOCATE (slt_cor)
   IF ( ALLOCATED(slt_err) ) DEALLOCATE (slt_err)
+  IF ( ALLOCATED(sw) ) DEALLOCATE (sw)
+  IF ( ALLOCATED(ap) ) DEALLOCATE (ap)
+  IF ( ALLOCATED(cl) ) DEALLOCATE (cl)
 
   RETURN
 END SUBROUTINE datafile_loop
