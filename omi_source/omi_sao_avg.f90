@@ -437,6 +437,15 @@ SUBROUTINE gridding_process (                                        &
      CALL write_he5_data_r4 ( 'SlantUncertainty',          nlongr, nlatgr, &
           gslt_err(1:nlongr,1:nlatgr), good_norm(idx_err_slt)       )
 
+     IF (yn_scat) THEN
+        CALL write_he5_data_r4_3D ( 'ScatteringWeights', nlongr, nlatgr, nlev, &
+             gsca_wei(1:nlongr,1:nlatgr,1:nlev) )
+        CALL write_he5_data_r4_3D ( 'A-priori', nlongr, nlatgr, nlev, &
+             gapr_gas(1:nlongr,1:nlatgr,1:nlev) )
+        CALL write_he5_data_r4_3D ( 'LevelCenter', nlongr, nlatgr, nlev, &
+             gcli_lev(1:nlongr,1:nlatgr,1:nlev) )
+
+     END IF
      CALL close_he5_output_file ( )
 
   END IF
